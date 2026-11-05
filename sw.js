@@ -1,6 +1,6 @@
 /* Offline support: cache the game shell so it opens without data after the first visit. */
-const CACHE = 'damadami-v1';
-const SHELL = ['./', 'index.html', 'css/style.css', 'js/data.js', 'js/engine.js', 'js/ui.js', 'assets/icon.svg', 'manifest.webmanifest'];
+const CACHE = 'damadami-v2';
+const SHELL = ['./', 'index.html', 'css/style.css', 'js/data.js', 'js/engine.js', 'js/voice.js', 'js/ui.js', 'assets/icon.svg', 'manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

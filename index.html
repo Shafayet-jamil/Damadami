@@ -19,6 +19,10 @@
   <header class="topbar">
     <button class="brand" id="btn-home" type="button" aria-label="হোমে ফিরুন">দামাদামি</button>
     <nav class="topbar-actions" aria-label="মেনু">
+      <button class="icon-btn sound-btn" id="btn-sound" type="button" aria-pressed="true" aria-label="চরিত্রদের কণ্ঠ">
+        <svg class="sound-on" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <svg class="sound-off" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
       <button class="icon-btn" id="btn-help" type="button" aria-label="কীভাবে খেলবেন">?</button>
       <button class="icon-btn" id="btn-stats" type="button" aria-label="আপনার রেকর্ড">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
@@ -105,7 +109,7 @@
         </div>
       </div>
 
-      <div class="chat" id="g-chat" aria-live="polite" aria-relevant="additions"></div>
+      <div class="chat" id="g-chat" aria-live="polite" aria-relevant="additions" title="কথা চলার সময় ট্যাপ করলে পরের লাইনে যাবে"></div>
 
       <div class="counter">
         <div class="ware">
@@ -265,6 +269,10 @@
     <ul class="help-list" id="help-tactics"></ul>
     <h3>খেতাব</h3>
     <ul class="help-list" id="help-titles"></ul>
+    <h3>চরিত্রদের কণ্ঠ</h3>
+    <p class="muted">প্রত্যেক দোকানদার নিজের গলায় কথা বলে। ▶ চেপে শুনে দেখুন। কথা চলার সময় চ্যাটে ট্যাপ করলে পরের লাইনে চলে যাবে।</p>
+    <ul class="voice-list" id="help-voices"></ul>
+    <p class="voice-status" id="voice-status"></p>
     <p class="muted">দৈনিক দামাদামি সবার জন্য একই। একবারই খেলা যায়। প্রতিদিন রাত ১২টায় (ঢাকা সময়) নতুন দোকান খোলে।</p>
   </form>
 </dialog>
@@ -284,6 +292,7 @@
 
 <script src="js/data.js"></script>
 <script src="js/engine.js"></script>
+<script src="js/voice.js"></script>
 <script src="js/ui.js"></script>
 </body>
 </html>

@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "start": "python3 -m http.server 8080",
-    "test": "node --test tests/engine.test.js",
+    "test": "node --test tests/engine.test.js tests/voice.test.js",
     "sim": "node tests/sim.js"
   },
   "license": "MIT"

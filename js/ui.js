@@ -3,6 +3,7 @@
   'use strict';
   const D = window.DamadamiData;
   const E = window.DamadamiEngine;
+  const V = window.DamadamiVoice;
   const $ = (id) => document.getElementById(id);
   const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const TOP_LEVEL = (function () {
@@ -22,6 +23,7 @@
     try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (e) { /* storage blocked */ }
   }
   const store = loadStore();
+  V.setEnabled(store.voice !== false);
 
   /* ---------- app state ---------- */
   let game = null; // engine state
@@ -34,6 +36,7 @@
 
   const SCREENS = ['screen-home', 'screen-game', 'screen-duel'];
   function show(id) {
+    V.stop();
     for (const s of SCREENS) $(s).hidden = s !== id;
     currentScreen = id;
     window.scrollTo(0, 0);
@@ -138,6 +141,94 @@
     renderState();
     show('screen-game');
     if (game.phase === 'over') showResult();
+    else if (!(extra.actions || []).length) greet();
+  }
+
+  // the vendor's opening line is spoken when a fresh game starts
+  async function greet() {
+    const node = $('g-chat').lastElementChild;
+    const msg = game.log[0];
+    if (!node || !msg) return;
+    setBusy(true);
+    await speakLine(msg, node);
+    setBusy(false);
+    renderState();
+  }
+
+  /* ---------- voices ---------- */
+  function speakerFor(msg) {
+    return msg.who === 'vendor' ? game.vendor.id : msg.who === 'buyer' ? 'buyer' : 'narrator';
+  }
+
+  async function speakLine(msg, node) {
+    if (!V.isEnabled() || !V.hasBangla()) return false;
+    if (node) node.classList.add('speaking');
+    await V.say(msg.text, speakerFor(msg), msg.kind);
+    if (node) node.classList.remove('speaking');
+    return true;
+  }
+
+  function renderSoundButton() {
+    const on = V.isEnabled() && V.supported;
+    $('btn-sound').setAttribute('aria-pressed', String(on));
+    $('btn-sound').setAttribute('aria-label', on ? 'কণ্ঠ বন্ধ করুন' : 'কণ্ঠ চালু করুন');
+  }
+
+  function toggleSound() {
+    if (!V.supported) {
+      toast('এই ব্রাউজারে কথা বলার সুবিধা নেই');
+      return;
+    }
+    const on = !V.isEnabled();
+    V.setEnabled(on);
+    store.voice = on;
+    saveStore();
+    renderSoundButton();
+    if (on && !V.hasBangla()) toast('এই ডিভাইসে বাংলা কণ্ঠ পাওয়া যায়নি। "?" চেপে দেখুন কীভাবে যোগ করবেন');
+    else toast(on ? 'চরিত্রদের কণ্ঠ চালু' : 'কণ্ঠ বন্ধ');
+  }
+
+  function sampleLine(vendor) {
+    return vendor.lines.greet[0]
+      .replace(/\{item\}/g, 'পাঞ্জাবি')
+      .replace(/\{price\}/g, '৳১,৮০০')
+      .replace(/\{addr\}/g, vendor.addr);
+  }
+
+  function fillVoices() {
+    const ul = $('help-voices');
+    const people = D.vendors.map((v) => ({ id: v.id, avatar: v.avatar, name: v.name, line: sampleLine(v) }));
+    people.push({ id: 'buyer', avatar: '🙋', name: 'আপনি (খদ্দের)', line: D.player.student.replace('{price}', '৳৯০০') });
+    for (const p of people) {
+      const li = el('li', 'voice-row');
+      const who = el('span', 'voice-who');
+      who.append(el('strong', null, p.name), el('span', null, V.PROFILES[p.id].label));
+      const btn = el('button', 'voice-play', '▶');
+      btn.type = 'button';
+      btn.setAttribute('aria-label', p.name + '-এর কণ্ঠ শুনুন');
+      btn.addEventListener('click', () => {
+        if (!V.hasBangla()) { voiceStatus(); return; }
+        V.say(p.line, p.id, null, true); // samples play even when voices are switched off
+      });
+      li.append(el('span', 'voice-avatar', p.avatar), who, btn);
+      ul.append(li);
+    }
+  }
+
+  function voiceStatus() {
+    const box = $('voice-status');
+    if (!V.supported) {
+      box.textContent = 'এই ব্রাউজারে কথা বলার সুবিধা নেই। Chrome বা Edge দিয়ে খুলে দেখুন।';
+    } else if (V.hasBangla()) {
+      const names = V.voiceInfo().map((v) => v.name).slice(0, 3).join(', ');
+      box.textContent = 'এই ডিভাইসের বাংলা কণ্ঠ: ' + names;
+    } else {
+      box.textContent =
+        'এই ডিভাইসে বাংলা কণ্ঠ পাওয়া যায়নি, তাই কথা শোনা যাবে না। ' +
+        'Android: সেটিংস → টেক্সট-টু-স্পিচ → Google → বাংলা ভয়েস ডাউনলোড করুন। ' +
+        'Windows: Settings → Time & Language → Speech → Add voices → বাংলা। ' +
+        'Microsoft Edge ব্রাউজারে সাধারণত বাংলা কণ্ঠ আগে থেকেই থাকে।';
+    }
   }
 
   /* ---------- game rendering ---------- */
@@ -190,13 +281,17 @@
         typing.append(el('i'), el('i'), el('i'));
         chat.append(typing);
         scrollChat();
-        await sleep(520);
+        await sleep(V.isEnabled() && V.hasBangla() ? 320 : 520);
         typing.remove();
       }
-      chat.append(bubble(msg));
+      const node = bubble(msg);
+      chat.append(node);
       scrollChat();
-      if (animate && msg.who === 'buyer') await sleep(180);
       if (animate && msg.who === 'vendor') react(msg.kind);
+      if (animate) {
+        const spoke = await speakLine(msg, node);
+        if (!spoke && msg.who === 'buyer') await sleep(180);
+      }
     }
   }
 
@@ -365,6 +460,8 @@
     if (game.phase === 'over') {
       record();
       showResult();
+      const r = E.result(game);
+      speakLine({ who: 'narrator', text: r.title.name + '! ' + r.title.note, kind: r.deal ? 'deal' : null }, null);
     }
   }
 
@@ -604,7 +701,10 @@
   /* ---------- wiring ---------- */
   function wire() {
     $('btn-home').addEventListener('click', () => { renderHome(); show('screen-home'); });
-    $('btn-help').addEventListener('click', () => openDialog($('dlg-help')));
+    $('btn-help').addEventListener('click', () => { voiceStatus(); openDialog($('dlg-help')); });
+    $('btn-sound').addEventListener('click', toggleSound);
+    $('g-chat').addEventListener('click', () => V.skip());
+    $('dlg-help').addEventListener('close', () => V.stop());
     $('btn-stats').addEventListener('click', openStats);
     $('btn-practice').addEventListener('click', startPractice);
     $('btn-duel').addEventListener('click', openDuelBuilder);
@@ -655,6 +755,8 @@
 
   function boot(saved) {
     fillHelp();
+    fillVoices();
+    renderSoundButton();
     wire();
     renderHome();
     const fromLink = linkedDuel();

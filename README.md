@@ -45,6 +45,30 @@ It's a static web page: no install, no account, no backend. It runs on low-end p
 | 🧔 জামাল মিয়া | Barely moves, unless you show cash | কঠিন |
 | 👩‍💼 শিরিন আপা | Keeps accounts, punishes lowballs hard | কঠিন |
 
+### Voices
+
+Every line in the conversation is spoken aloud, each character in their own voice:
+
+| Character | Voice |
+|---|---|
+| 🧑 টুটুল | Young, high and fast, nervous |
+| 👵 নাসিমা খালা | Female voice, soft and slow |
+| 😎 সুমন ভাই | Quick and smooth, a fast talker |
+| 👴 রহিম চাচা | Deep and slow, gruff |
+| 🧔 জামাল মিয়া | Low and flat, few words |
+| 👩‍💼 শিরিন আপা | Female voice, crisp and measured |
+| 🙋 You (buyer) | Always a different voice from the vendor |
+
+- The mood of a line changes the delivery: angry lines come faster and lower, closing a deal sounds brighter. The announcer reads your title at the end.
+- Prices are spoken the way people say them at a stall: ৳১,৮০০ is "আঠারোশো টাকা", ৳১,১৫০ is "এগারোশো পঞ্চাশ টাকা".
+- The 🔊 button switches voices on or off, and the setting is remembered. Tap the chat to skip the line being spoken. The help sheet (?) has a ▶ sample for every character.
+- Voices use the browser's built-in text-to-speech, so they are free, add nothing to download, and work offline. They need a **Bangla voice on the device**:
+  - **Android:** Settings → Text-to-speech → Google → download the Bengali voice.
+  - **Windows:** Settings → Time & Language → Speech → Add voices → Bangla.
+  - **Microsoft Edge** usually includes natural Bangla voices already.
+  - Without a Bangla voice the game plays silently and the help sheet explains how to add one.
+- Voices sound best on a device with both a male and a female Bangla voice (for example Edge's Pradeep and Nabanita). With only one voice, characters are told apart by pitch and speed.
+
 ## Run it
 
 Open `index.html` in a browser, or serve the folder so the offline cache and links work:
@@ -64,9 +88,11 @@ index.html            page structure
 css/style.css         all styling (light and dark themes)
 js/data.js            items, vendors, tactic cards, Bangla dialogue, titles
 js/engine.js          negotiation rules (pure logic, no DOM; runs in Node too)
+js/voice.js           character voices (text-to-speech, price-to-words)
 js/ui.js              screens, animation, storage, sharing
 sw.js                 offline cache
-tests/engine.test.js  unit tests
+tests/engine.test.js  engine unit tests
+tests/voice.test.js   voice unit tests
 tests/sim.js          balance simulator
 ```
 
@@ -94,4 +120,4 @@ npm test
 npm run sim
 ```
 
-`npm test` runs the engine unit tests. They cover replay determinism, never selling below the floor, the Dhaka day rollover, challenge codes and dialogue placeholders. `npm run sim` plays thousands of scripted games per vendor and prints deal rates and title spreads.
+`npm test` runs the engine and voice unit tests. They cover replay determinism, never selling below the floor, the Dhaka day rollover, challenge codes and dialogue placeholders. `npm run sim` plays thousands of scripted games per vendor and prints deal rates and title spreads.
