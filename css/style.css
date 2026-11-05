@@ -458,6 +458,7 @@ input[type="range"]:disabled { opacity: 0.4; }
 
 .footer { text-align: center; color: var(--muted); font-size: 13px; }
 .footer p { margin: 0; }
+.footer a { color: inherit; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }

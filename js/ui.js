@@ -126,6 +126,7 @@
 
   function startGame(setup, extra) {
     ctx = { mode: setup.mode, setup, dayNo: extra.dayNo || null, shopName: extra.shopName || '', code: extra.code || '', recorded: false };
+    V.preload(voicesFor(setup.vendorId));
     try {
       game = E.replay(setup, extra.actions || []);
     } catch (e) {
@@ -144,28 +145,30 @@
     else if (!(extra.actions || []).length) greet();
   }
 
-  // the vendor's opening line is spoken when a fresh game starts
-  async function greet() {
+  // the vendor's opening line is spoken when a fresh game starts; any move interrupts it
+  function greet() {
     const node = $('g-chat').lastElementChild;
     const msg = game.log[0];
-    if (!node || !msg) return;
-    setBusy(true);
-    await speakLine(msg, node);
-    setBusy(false);
-    renderState();
+    if (node && msg) speakLine(msg, node);
   }
 
-  /* ---------- voices ---------- */
+  /* ---------- voices (built in: recordings ship with the game) ---------- */
   function speakerFor(msg) {
-    return msg.who === 'vendor' ? game.vendor.id : msg.who === 'buyer' ? 'buyer' : 'narrator';
+    if (msg.who === 'vendor') return game.vendor.id;
+    if (msg.who === 'buyer') return V.buyerFor(game.vendor.id);
+    return 'narrator';
   }
 
   async function speakLine(msg, node) {
-    if (!V.isEnabled() || !V.hasBangla()) return false;
+    if (!V.isEnabled() || !V.supported || !msg.speech || !msg.speech.length) return false;
     if (node) node.classList.add('speaking');
-    await V.say(msg.text, speakerFor(msg), msg.kind);
+    await V.play(msg.speech, speakerFor(msg), msg.kind);
     if (node) node.classList.remove('speaking');
     return true;
+  }
+
+  function voicesFor(vendorId) {
+    return [vendorId, V.buyerFor(vendorId), 'narrator'];
   }
 
   function renderSoundButton() {
@@ -176,39 +179,40 @@
 
   function toggleSound() {
     if (!V.supported) {
-      toast('এই ব্রাউজারে কথা বলার সুবিধা নেই');
+      toast('এই ব্রাউজারে শব্দ চালানো যায় না');
       return;
     }
+    V.unlock();
     const on = !V.isEnabled();
     V.setEnabled(on);
     store.voice = on;
     saveStore();
     renderSoundButton();
-    if (on && !V.hasBangla()) toast('এই ডিভাইসে বাংলা কণ্ঠ পাওয়া যায়নি। "?" চেপে দেখুন কীভাবে যোগ করবেন');
-    else toast(on ? 'চরিত্রদের কণ্ঠ চালু' : 'কণ্ঠ বন্ধ');
-  }
-
-  function sampleLine(vendor) {
-    return vendor.lines.greet[0]
-      .replace(/\{item\}/g, 'পাঞ্জাবি')
-      .replace(/\{price\}/g, '৳১,৮০০')
-      .replace(/\{addr\}/g, vendor.addr);
+    toast(on ? 'চরিত্রদের কণ্ঠ চালু' : 'কণ্ঠ বন্ধ');
   }
 
   function fillVoices() {
     const ul = $('help-voices');
-    const people = D.vendors.map((v) => ({ id: v.id, avatar: v.avatar, name: v.name, line: sampleLine(v) }));
-    people.push({ id: 'buyer', avatar: '🙋', name: 'আপনি (খদ্দের)', line: D.player.student.replace('{price}', '৳৯০০') });
+    const people = D.vendors.map((v) => ({
+      id: v.id, avatar: v.avatar, name: v.name,
+      speech: E.speechParts(v.lines.greet[0], { price: 1800 }, v.addr, 'panjabi'),
+    }));
+    const buyerLine = E.speechParts(D.player.student, { price: 900 }, '', null);
+    people.push({ id: 'buyer_f', avatar: '🙋‍♀️', name: 'আপনি', speech: buyerLine });
+    people.push({ id: 'buyer_m', avatar: '🙋‍♂️', name: 'আপনি', speech: buyerLine });
     for (const p of people) {
       const li = el('li', 'voice-row');
       const who = el('span', 'voice-who');
-      who.append(el('strong', null, p.name), el('span', null, V.PROFILES[p.id].label));
+      who.append(el('strong', null, p.name), el('span', null, V.SPEAKERS[p.id].label));
       const btn = el('button', 'voice-play', '▶');
       btn.type = 'button';
-      btn.setAttribute('aria-label', p.name + '-এর কণ্ঠ শুনুন');
-      btn.addEventListener('click', () => {
-        if (!V.hasBangla()) { voiceStatus(); return; }
-        V.say(p.line, p.id, null, true); // samples play even when voices are switched off
+      btn.setAttribute('aria-label', E.possessive(p.name) + ' কণ্ঠ শুনুন');
+      btn.addEventListener('click', async () => {
+        V.unlock();
+        btn.textContent = '…';
+        await V.play(p.speech, p.id, null, true); // samples play even when voices are switched off
+        btn.textContent = '▶';
+        voiceStatus();
       });
       li.append(el('span', 'voice-avatar', p.avatar), who, btn);
       ul.append(li);
@@ -217,18 +221,10 @@
 
   function voiceStatus() {
     const box = $('voice-status');
-    if (!V.supported) {
-      box.textContent = 'এই ব্রাউজারে কথা বলার সুবিধা নেই। Chrome বা Edge দিয়ে খুলে দেখুন।';
-    } else if (V.hasBangla()) {
-      const names = V.voiceInfo().map((v) => v.name).slice(0, 3).join(', ');
-      box.textContent = 'এই ডিভাইসের বাংলা কণ্ঠ: ' + names;
-    } else {
-      box.textContent =
-        'এই ডিভাইসে বাংলা কণ্ঠ পাওয়া যায়নি, তাই কথা শোনা যাবে না। ' +
-        'Android: সেটিংস → টেক্সট-টু-স্পিচ → Google → বাংলা ভয়েস ডাউনলোড করুন। ' +
-        'Windows: Settings → Time & Language → Speech → Add voices → বাংলা। ' +
-        'Microsoft Edge ব্রাউজারে সাধারণত বাংলা কণ্ঠ আগে থেকেই থাকে।';
-    }
+    const st = V.status();
+    if (st === 'unsupported') box.textContent = 'এই ব্রাউজারে শব্দ চালানো যায় না। Chrome, Edge বা Safari দিয়ে খুলে দেখুন।';
+    else if (st === 'failed') box.textContent = 'কণ্ঠের ফাইল লোড হয়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।';
+    else box.textContent = 'সব কণ্ঠ গেমের ভেতরেই আছে, আলাদা কিছু ডাউনলোড বা ইনস্টল করতে হবে না। কণ্ঠের মডেল: SYSPIN, IISc Bangalore (CC-BY 4.0)।';
   }
 
   /* ---------- game rendering ---------- */
@@ -281,7 +277,7 @@
         typing.append(el('i'), el('i'), el('i'));
         chat.append(typing);
         scrollChat();
-        await sleep(V.isEnabled() && V.hasBangla() ? 320 : 520);
+        await sleep(V.isEnabled() && V.supported ? 320 : 520);
         typing.remove();
       }
       const node = bubble(msg);
@@ -461,7 +457,7 @@
       record();
       showResult();
       const r = E.result(game);
-      speakLine({ who: 'narrator', text: r.title.name + '! ' + r.title.note, kind: r.deal ? 'deal' : null }, null);
+      speakLine({ who: 'narrator', speech: E.speechParts(r.title.name + '! ' + r.title.note, {}, '', null), kind: r.deal ? 'deal' : null }, null);
     }
   }
 
@@ -758,6 +754,14 @@
     fillVoices();
     renderSoundButton();
     wire();
+    // fetch today's vendor voice early so the first line plays without waiting
+    V.init('voices/').then(() => {
+      if (V.isEnabled()) V.preload(voicesFor(E.dailySetup(E.dayNumber()).vendorId));
+    });
+    // browsers only allow sound after a tap
+    const unlock = () => V.unlock();
+    document.addEventListener('pointerdown', unlock, { passive: true });
+    document.addEventListener('keydown', unlock);
     renderHome();
     const fromLink = linkedDuel();
     if (fromLink) {

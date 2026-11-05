@@ -117,18 +117,61 @@
     for (const k in extra) out[k] = typeof extra[k] === 'number' ? taka(extra[k]) : extra[k];
     return out;
   }
-  function say(state, who, text, kind) {
-    state.log.push({ who, text, kind: kind || null, round: state.round });
+  function say(state, who, text, kind, speech) {
+    state.log.push({ who, text, kind: kind || null, round: state.round, speech: speech || [] });
   }
+
+  /* ---------- speech plan ----------
+   * Each line is also described as a list of recorded pieces, so the built-in voices
+   * can play it: {s: text} a recorded phrase, {p: 1800} a price ("আঠারোশো টাকা"),
+   * {i: 'panjabi'} an item name, {gap: 1} a short pause between sentences.
+   * tools/voices builds the recordings from exactly these pieces. */
+  const PRICE_KEYS = { price: 1, offer: 1, prev: 1 };
+  function cleanPhrase(text) {
+    return text.replace(/^[\s,।?!.\-–]+/, '').replace(/\.{2,}|…/g, ',').replace(/\s+/g, ' ').trim();
+  }
+  function speechParts(template, values, addr, itemId) {
+    const out = [];
+    const parts = template.replace(/\{addr\}/g, addr || '').split(/\{(\w+)\}/);
+    parts.forEach((piece, i) => {
+      if (i % 2 === 0) {
+        const text = cleanPhrase(piece);
+        if (/[ঀ-৿]/.test(text)) out.push({ s: text });
+      } else if (PRICE_KEYS[piece] && typeof values[piece] === 'number') {
+        out.push({ p: values[piece] });
+      } else if (piece === 'item' && itemId) {
+        out.push({ i: itemId });
+      }
+    });
+    return out;
+  }
+
   function vendorSays(state, keys, extra, kind) {
-    const text = keys
-      .filter(Boolean)
-      .map((k) => fill(vendorLine(state, k), vars(state, extra)))
-      .join(' ');
-    say(state, 'vendor', text, kind);
+    const texts = [];
+    const speech = [];
+    for (const k of keys.filter(Boolean)) {
+      const template = vendorLine(state, k);
+      texts.push(fill(template, vars(state, extra)));
+      if (speech.length) speech.push({ gap: 1 });
+      speech.push(...speechParts(template, extra, state.vendor.addr, state.item.id));
+    }
+    say(state, 'vendor', texts.join(' '), kind, speech);
   }
   function buyerSays(state, template, extra) {
-    say(state, 'buyer', fill(template, vars(state, extra)));
+    say(state, 'buyer', fill(template, vars(state, extra)), null, speechParts(template, extra, '', state.item.id));
+  }
+
+  /* Every price that can be spoken: ৳10–৳1,990 in steps of 10, ৳2,000–৳6,400 in steps of 50 */
+  const MAX_PRICE = 6400;
+  function spokenPrices() {
+    const out = [];
+    for (let p = 10; p < 2000; p += 10) out.push(p);
+    for (let p = 2000; p <= MAX_PRICE; p += 50) out.push(p);
+    return out;
+  }
+  // round a price up onto that grid
+  function tidy(p) {
+    return Math.min(MAX_PRICE, ceilTo(p, stepFor(p)));
   }
 
   /* ---------- setup ---------- */
@@ -142,7 +185,7 @@
     let opening = setup.opening;
     if (!opening) {
       const raw = item.fair * lerp(vendor.markup[0], vendor.markup[1], nextRand(gen));
-      opening = roundTo(raw, raw >= 500 ? 50 : 10);
+      opening = Math.min(MAX_PRICE, roundTo(raw, raw >= 500 ? 50 : 10));
     }
     let floor = setup.floor;
     if (!floor) floor = Math.round(item.fair * lerp(vendor.floorRatio[0], vendor.floorRatio[1], nextRand(gen)));
@@ -348,7 +391,7 @@
     state.patience = Math.max(1, state.patience - (v.walkHurt || 0));
 
     const step = stepFor(state.ask);
-    const counter = Math.min(state.ask, Math.max(ceilTo(F, step), O + step, roundTo(F + (state.ask - F) * 0.35, step)));
+    const counter = Math.min(state.ask, tidy(Math.max(ceilTo(F, step), O + step, roundTo(F + (state.ask - F) * 0.35, step))));
     if (O >= standPrice(state) * 0.97 || (O >= F && counter <= O)) {
       vendorSays(state, ['walkWin'], { price: O }, 'deal');
       state.row.push('🚶', '🤝');
@@ -379,8 +422,7 @@
 
   function goBack(state) {
     if (state.phase !== 'walked') throw new Error('You have not walked away');
-    const step = stepFor(state.ask);
-    const raised = Math.min(state.opening, roundTo(state.ask * 1.12, step));
+    const raised = Math.min(state.opening, tidy(state.ask * 1.12));
     if (raised !== state.ask) state.asks.push(raised);
     state.ask = raised;
     state.patience = Math.max(5, state.patience - 25);
@@ -548,6 +590,10 @@
 
   return {
     MAX_ROUNDS,
+    MAX_PRICE,
+    spokenPrices,
+    speechParts,
+    hashStr,
     bn,
     possessive,
     taka,

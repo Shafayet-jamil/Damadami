@@ -155,6 +155,44 @@ test('share text has the deal number, prices and title', () => {
   assert.ok(!/\{\w+\}/.test(text));
 });
 
+test('every spoken price has a recording and every line has a speech plan', () => {
+  const grid = new Set(E.spokenPrices());
+  const cards = ['student', 'competitor', 'flatter', 'cash', 'regular'];
+  for (const v of D.vendors) {
+    for (let i = 0; i < 120; i++) {
+      const item = D.items[i % D.items.length];
+      const s = E.createGame({ itemId: item.id, vendorId: v.id, seed: 3000 + i });
+      let o = s.opening * (0.15 + (i % 5) * 0.06);
+      while (s.phase === 'haggle' || s.phase === 'walked') {
+        if (s.phase === 'walked') { E.act(s, { t: 'back' }); continue; }
+        if (s.round === 2 && !s.used.walk) E.act(s, { t: 'walk' });
+        else {
+          const k = cards[s.round % 5];
+          E.act(s, { t: 'offer', a: legal(s, o), k: s.used[k] ? null : k });
+        }
+        o += s.opening * 0.05;
+      }
+      if (s.phase === 'final') E.act(s, { t: 'accept' });
+      for (const m of s.log) {
+        assert.ok(m.speech.length > 0, 'no speech for: ' + m.text);
+        for (const t of m.speech) {
+          if ('p' in t) assert.ok(grid.has(t.p), `price ${t.p} not on the recorded grid (${v.id})`);
+          if ('s' in t) assert.ok(!/[{}0-9০-৯৳]/.test(t.s), 'unspeakable phrase: ' + t.s);
+          if ('i' in t) assert.equal(t.i, item.id);
+        }
+      }
+    }
+  }
+});
+
+test('templates never glue a placeholder to a suffix (it would sound broken when stitched)', () => {
+  const all = [];
+  for (const v of D.vendors) for (const k in v.lines) all.push(...v.lines[k]);
+  for (const k in D.lines) all.push(...D.lines[k]);
+  for (const k in D.player) all.push(...[].concat(D.player[k]));
+  for (const t of all) assert.ok(!/\{(price|offer|prev|item)\}[-ঀ-৿]/.test(t), t);
+});
+
 test('Bangla possessives', () => {
   assert.equal(E.possessive('নাসিমা খালা'), 'নাসিমা খালার');
   assert.equal(E.possessive('শাফায়েত'), 'শাফায়েতের');

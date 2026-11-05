@@ -47,27 +47,52 @@ It's a static web page: no install, no account, no backend. It runs on low-end p
 
 ### Voices
 
-Every line in the conversation is spoken aloud, each character in their own voice:
+Every line in the conversation is spoken aloud, each character in their own voice. The voices are **built into the game**: every phrase is pre-recorded and ships in `voices/`, so players don't need to install or download anything.
 
 | Character | Voice |
 |---|---|
-| 🧑 টুটুল | Young, high and fast, nervous |
-| 👵 নাসিমা খালা | Female voice, soft and slow |
-| 😎 সুমন ভাই | Quick and smooth, a fast talker |
-| 👴 রহিম চাচা | Deep and slow, gruff |
-| 🧔 জামাল মিয়া | Low and flat, few words |
-| 👩‍💼 শিরিন আপা | Female voice, crisp and measured |
-| 🙋 You (buyer) | Always a different voice from the vendor |
+| 🧑 টুটুল | Male voice, higher and fast, nervous |
+| 👵 নাসিমা খালা | Female voice, lower and slow |
+| 😎 সুমন ভাই | Male voice, quick, a fast talker |
+| 👴 রহিম চাচা | Male voice, deep and slow, gruff |
+| 🧔 জামাল মিয়া | Male voice, low and steady |
+| 👩‍💼 শিরিন আপা | Female voice, brisk |
+| 🙋 You (buyer) | Female voice against male vendors, male voice against female vendors |
+| Announcer | Reads your title at the end |
 
-- The mood of a line changes the delivery: angry lines come faster and lower, closing a deal sounds brighter. The announcer reads your title at the end.
-- Prices are spoken the way people say them at a stall: ৳১,৮০০ is "আঠারোশো টাকা", ৳১,১৫০ is "এগারোশো পঞ্চাশ টাকা".
+- Prices are spoken the way people say them at a stall: ৳১,৮০০ is "আঠারোশো টাকা", ৳৩,৫৫০ is "তিন হাজার পাঁচশো পঞ্চাশ টাকা". They're stitched from 75 recorded parts, so every price the game can produce is covered.
+- Angry lines play slightly faster.
 - The 🔊 button switches voices on or off, and the setting is remembered. Tap the chat to skip the line being spoken. The help sheet (?) has a ▶ sample for every character.
-- Voices use the browser's built-in text-to-speech, so they are free, add nothing to download, and work offline. They need a **Bangla voice on the device**:
-  - **Android:** Settings → Text-to-speech → Google → download the Bengali voice.
-  - **Windows:** Settings → Time & Language → Speech → Add voices → Bangla.
-  - **Microsoft Edge** usually includes natural Bangla voices already.
-  - Without a Bangla voice the game plays silently and the help sheet explains how to add one.
-- Voices sound best on a device with both a male and a female Bangla voice (for example Edge's Pradeep and Nabanita). With only one voice, characters are told apart by pitch and speed.
+- Each character is one MP3 (about 0.3–0.9 MB) plus `voices/manifest.json`, which says where each clip sits in it. A game loads only its vendor, the buyer voice and the announcer, and the offline cache keeps them after the first play.
+- The voices need the game served over http(s) (GitHub Pages, or `python3 -m http.server`). Opened straight from a file, the browser blocks loading them and the game plays silently.
+
+**Voice credit:** generated with the SYSPIN Bangla VITS voices from IISc Bangalore ([female](https://huggingface.co/SYSPIN/tts_vits_coquiai_BengaliFemale), CC-BY 4.0; [male](https://huggingface.co/SYSPIN/tts_vits_coquiai_BengaliMale), same project, its page lists no license). Keep this credit wherever the game is published.
+
+#### Regenerating the voices
+
+Re-run this after changing any dialogue in `js/data.js` (a test fails if a line has no recording):
+
+```bash
+pip install torch numpy scipy
+```
+
+```bash
+tools/voices/fetch_models.sh
+```
+
+```bash
+node tools/voices/clips.js > /tmp/jobs.json
+```
+
+```bash
+cd tools/voices && python build.py /tmp/jobs.json ../../voices
+```
+
+```bash
+python tools/voices/check.py voices/
+```
+
+`clips.js` lists every phrase each character can say, straight from the game's dialogue. `build.py` records them, trims and levels each clip, applies the character's pitch and speed (set in `clips.js`), and packs one MP3 per character (about 10 minutes on a 4-core CPU, no GPU needed). `check.py` verifies that every clip sits where the manifest says. Requires ffmpeg with the rubberband filter.
 
 ## Run it
 
@@ -88,7 +113,9 @@ index.html            page structure
 css/style.css         all styling (light and dark themes)
 js/data.js            items, vendors, tactic cards, Bangla dialogue, titles
 js/engine.js          negotiation rules (pure logic, no DOM; runs in Node too)
-js/voice.js           character voices (text-to-speech, price-to-words)
+js/voice.js           plays the built-in voices; price-to-words
+voices/               recorded character voices (one MP3 each + manifest.json)
+tools/voices/         scripts that generate the voices
 js/ui.js              screens, animation, storage, sharing
 sw.js                 offline cache
 tests/engine.test.js  engine unit tests
