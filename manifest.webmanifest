@@ -1,0 +1,14 @@
+{
+  "name": "দামাদামি",
+  "short_name": "দামাদামি",
+  "description": "দোকানদার চাইলো ১৮০০, আপনি কত দিবেন? প্রতিদিনের দরকষাকষির খেলা।",
+  "lang": "bn",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#e6eee8",
+  "theme_color": "#d81b60",
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

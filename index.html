@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>দামাদামি</title>
+<meta name="description" content="দোকানদার চাইলো ১৮০০, আপনি কত দিবেন? প্রতিদিন একটা নতুন দোকান, একটা নতুন দামাদামি।">
+<meta name="theme-color" content="#d81b60">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@500;600;700;800&family=Galada&family=Hind+Siliguri:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<!-- app:start -->
+<div class="app" id="app">
+  <header class="topbar">
+    <button class="brand" id="btn-home" type="button" aria-label="হোমে ফিরুন">দামাদামি</button>
+    <nav class="topbar-actions" aria-label="মেনু">
+      <button class="icon-btn" id="btn-help" type="button" aria-label="কীভাবে খেলবেন">?</button>
+      <button class="icon-btn" id="btn-stats" type="button" aria-label="আপনার রেকর্ড">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
+    </nav>
+  </header>
+
+  <!-- ============ HOME ============ -->
+  <main class="screen" id="screen-home">
+    <section class="hero">
+      <div class="awning" aria-hidden="true"></div>
+      <div class="hero-body">
+        <p class="hero-kicker">প্রতিদিন একটা নতুন দোকান</p>
+        <h1 class="hero-title">দোকানদার চাইলো <span class="strike">৳১,৮০০</span><br>আপনি কত দিবেন?</h1>
+        <p class="hero-sub">দোকানদারের মনে একটা গোপন সর্বনিম্ন দাম আছে। ধৈর্য শেষ হওয়ার আগে সেই দামের যত কাছে কিনতে পারবেন, তত বড় খেতাব।</p>
+      </div>
+    </section>
+
+    <section class="daily-card" id="daily-card" aria-labelledby="daily-heading">
+      <div class="daily-head">
+        <h2 id="daily-heading">আজকের দামাদামি <span id="daily-no"></span></h2>
+        <span class="chip" id="daily-market"></span>
+      </div>
+      <div class="daily-body">
+        <div class="daily-item" id="daily-item-emoji" aria-hidden="true"></div>
+        <div class="daily-info">
+          <p class="daily-item-name" id="daily-item-name"></p>
+          <p class="daily-vendor" id="daily-vendor"></p>
+        </div>
+      </div>
+      <div class="daily-foot" id="daily-foot"></div>
+    </section>
+
+    <div class="mode-grid">
+      <button class="mode-card" id="btn-practice" type="button">
+        <span class="mode-icon" aria-hidden="true">🛍️</span>
+        <span class="mode-text"><strong>অনুশীলন</strong><span>যত খুশি দোকান ঘুরে হাত পাকান</span></span>
+      </button>
+      <button class="mode-card" id="btn-duel" type="button">
+        <span class="mode-icon" aria-hidden="true">⚔️</span>
+        <span class="mode-text"><strong>বন্ধুকে চ্যালেঞ্জ</strong><span>নিজের দোকান সাজিয়ে কোড পাঠান</span></span>
+      </button>
+    </div>
+
+    <form class="code-form" id="code-form" autocomplete="off">
+      <label for="code-input">বন্ধুর চ্যালেঞ্জ কোড আছে?</label>
+      <div class="code-row">
+        <input id="code-input" name="code" type="text" inputmode="text" placeholder="DM দিয়ে শুরু কোড বা লিংক" spellcheck="false">
+        <button class="btn btn-ghost" type="submit">খেলুন</button>
+      </div>
+      <p class="form-error" id="code-error" hidden>কোডটা মিলছে না। পুরো কোডটা কপি করে আবার দিন।</p>
+    </form>
+
+    <section class="how" aria-labelledby="how-heading">
+      <h2 id="how-heading">খেলার নিয়ম</h2>
+      <ol class="how-list">
+        <li><strong>দাম বলুন।</strong> স্লাইডার টেনে আপনার দাম ঠিক করুন। চাইলে সাথে একটা কৌশল কার্ড খেলুন।</li>
+        <li><strong>দোকানদারকে পড়ুন।</strong> সে যখন অল্প অল্প কমায়, বুঝবেন তার গোপন দামের কাছে চলে এসেছেন।</li>
+        <li><strong>ধৈর্য খেয়াল রাখুন।</strong> খুব কম দাম বললে মেজাজ চড়ে। ধৈর্য শূন্য হলে আর বেচবে না।</li>
+      </ol>
+    </section>
+  </main>
+
+  <!-- ============ GAME ============ -->
+  <main class="screen" id="screen-game" hidden>
+    <div class="duel-banner" id="duel-banner" hidden></div>
+    <section class="stall" aria-label="দোকান">
+      <div class="awning" aria-hidden="true"></div>
+      <div class="stall-meta">
+        <span class="chip" id="g-market"></span>
+        <span class="round" id="g-round"></span>
+      </div>
+
+      <div class="vendor">
+        <div class="vendor-avatar" id="g-avatar" aria-hidden="true"></div>
+        <div class="vendor-info">
+          <p class="vendor-name"><span id="g-vendor-name"></span> <span class="level" id="g-level"></span></p>
+          <p class="vendor-title" id="g-vendor-title"></p>
+          <div class="patience" id="g-patience" role="meter" aria-label="দোকানদারের ধৈর্য" aria-valuemin="0" aria-valuemax="100">
+            <span class="patience-face" id="g-face" aria-hidden="true">😊</span>
+            <span class="patience-track"><span class="patience-fill" id="g-patience-fill"></span></span>
+            <span class="patience-label">ধৈর্য</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat" id="g-chat" aria-live="polite" aria-relevant="additions"></div>
+
+      <div class="counter">
+        <div class="ware">
+          <span class="ware-emoji" id="g-item-emoji" aria-hidden="true"></span>
+          <span class="ware-name" id="g-item-name"></span>
+        </div>
+        <div class="tag" aria-label="দোকানদারের দাম">
+          <span class="tag-hole" aria-hidden="true"></span>
+          <span class="tag-history" id="g-tag-history"></span>
+          <span class="tag-label">দোকানদার চাইছে</span>
+          <span class="tag-price" id="g-ask"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- haggling controls -->
+    <section class="controls" id="panel-haggle" aria-label="আপনার চাল">
+      <div class="offer">
+        <div class="offer-head">
+          <label for="offer-range">আপনার দাম</label>
+          <output class="offer-value" id="offer-value" for="offer-range"></output>
+        </div>
+        <div class="offer-row">
+          <button class="nudge" id="offer-minus" type="button" aria-label="দাম কমান">−</button>
+          <input id="offer-range" type="range" min="10" max="100" step="10" value="50">
+          <button class="nudge" id="offer-plus" type="button" aria-label="দাম বাড়ান">+</button>
+        </div>
+        <p class="offer-hint" id="offer-hint"></p>
+      </div>
+
+      <div class="tactics-head">
+        <span>কৌশল কার্ড</span><span class="muted">প্রতিটা একবারই খেলা যায়</span>
+      </div>
+      <div class="tactics" id="tactics" role="group" aria-label="কৌশল কার্ড"></div>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="btn-offer" type="button">দাম বলুন</button>
+        <button class="btn btn-ghost" id="btn-accept" type="button"></button>
+      </div>
+    </section>
+
+    <!-- after a failed bluff -->
+    <section class="controls choice" id="panel-walked" hidden>
+      <p class="choice-text">দোকানদার পেছন থেকে ডাকলো না। এখন কী করবেন?</p>
+      <div class="actions">
+        <button class="btn btn-primary" id="btn-back" type="button">লজ্জা ভুলে ফিরে যাই</button>
+        <button class="btn btn-ghost" id="btn-leave-walked" type="button">বাড়ি চলে যাই</button>
+      </div>
+    </section>
+
+    <!-- last price -->
+    <section class="controls choice" id="panel-final" hidden>
+      <p class="choice-text">দোকানদার আর কথা বলবে না। শেষ দাম <strong id="final-price"></strong>।</p>
+      <div class="actions">
+        <button class="btn btn-primary" id="btn-final-accept" type="button">এই দামেই নিলাম</button>
+        <button class="btn btn-ghost" id="btn-final-leave" type="button">থাক, লাগবে না</button>
+      </div>
+    </section>
+
+    <!-- result -->
+    <section class="result" id="panel-result" hidden aria-live="polite">
+      <div class="result-badge">
+        <span class="result-emoji" id="r-emoji" aria-hidden="true"></span>
+        <div>
+          <p class="result-kicker" id="r-kicker"></p>
+          <h2 class="result-title" id="r-title"></h2>
+          <p class="result-note" id="r-note"></p>
+        </div>
+      </div>
+      <div class="result-prices" id="r-prices"></div>
+      <div class="scale" id="r-scale" aria-hidden="true">
+        <div class="scale-track">
+          <span class="scale-mark scale-floor"></span>
+          <span class="scale-mark scale-paid" id="r-scale-paid"></span>
+        </div>
+        <div class="scale-labels">
+          <span id="r-scale-floor"></span>
+          <span id="r-scale-open"></span>
+        </div>
+      </div>
+      <p class="result-secret" id="r-secret"></p>
+      <p class="result-row" id="r-row" aria-label="দফাওয়ারি সারাংশ"></p>
+      <div class="actions">
+        <button class="btn btn-primary" id="btn-share" type="button">ফলাফল কপি করুন</button>
+        <button class="btn btn-ghost" id="btn-again" type="button"></button>
+      </div>
+      <textarea class="share-fallback" id="share-fallback" rows="5" readonly hidden aria-label="শেয়ার করার লেখা"></textarea>
+      <p class="next-deal" id="next-deal" hidden></p>
+    </section>
+  </main>
+
+  <!-- ============ DUEL BUILDER ============ -->
+  <main class="screen" id="screen-duel" hidden>
+    <section class="panel">
+      <h2 class="panel-title">নিজের দোকান সাজান</h2>
+      <p class="panel-sub">জিনিস, দোকানদার আর দাম ঠিক করে বন্ধুকে কোড পাঠান। আপনার গোপন দাম বন্ধু জানবে না। দেখা যাক কত কাছে আসতে পারে।</p>
+      <form class="duel-form" id="duel-form" autocomplete="off">
+        <div class="field">
+          <label for="duel-name">দোকানের নাম (আপনার নাম)</label>
+          <input id="duel-name" type="text" maxlength="24" placeholder="যেমন: শাফায়েত">
+        </div>
+        <div class="field">
+          <label for="duel-item">কী বেচবেন?</label>
+          <select id="duel-item"></select>
+        </div>
+        <div class="field">
+          <label for="duel-vendor">কে দোকানে বসবে?</label>
+          <select id="duel-vendor"></select>
+        </div>
+        <div class="field">
+          <div class="field-head"><label for="duel-open">প্রথম দাম</label><output id="duel-open-out" for="duel-open"></output></div>
+          <input id="duel-open" type="range">
+        </div>
+        <div class="field">
+          <div class="field-head"><label for="duel-floor">গোপন সর্বনিম্ন দাম</label><output id="duel-floor-out" for="duel-floor"></output></div>
+          <input id="duel-floor" type="range">
+          <p class="field-hint">এর নিচে দোকানদার কিছুতেই বেচবে না।</p>
+        </div>
+        <button class="btn btn-primary" type="submit">চ্যালেঞ্জ তৈরি করুন</button>
+      </form>
+      <div class="duel-out" id="duel-out" hidden>
+        <p class="duel-out-label">এই কোডটা বন্ধুকে পাঠান</p>
+        <textarea id="duel-code" rows="3" readonly></textarea>
+        <div class="actions">
+          <button class="btn btn-primary" id="btn-copy-code" type="button">কোড কপি করুন</button>
+          <button class="btn btn-ghost" id="btn-duel-home" type="button">হোমে ফিরুন</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>দামাদামি · প্রতিদিন রাত ১২টায় (ঢাকা) নতুন দোকান</p>
+  </footer>
+</div>
+
+<!-- walk-away suspense -->
+<div class="walk-overlay" id="walk-overlay" hidden>
+  <div class="walk-box">
+    <p class="walk-steps" aria-hidden="true"><span>👣</span><span>👣</span><span>👣</span></p>
+    <p class="walk-text">আপনি হাঁটা দিলেন...</p>
+    <p class="walk-sub">পেছন থেকে ডাকবে তো?</p>
+  </div>
+</div>
+
+<dialog class="sheet" id="dlg-help" aria-labelledby="help-title">
+  <form method="dialog" class="sheet-inner">
+    <div class="sheet-head"><h2 id="help-title">কীভাবে খেলবেন</h2><button class="icon-btn" value="close" aria-label="বন্ধ করুন">✕</button></div>
+    <p>প্রতিটা দোকানদারের মনে একটা <strong>গোপন সর্বনিম্ন দাম</strong> আছে। এর নিচে সে বেচবে না। আপনার কাজ সেই দামের যত কাছে সম্ভব কেনা।</p>
+    <ul class="help-list">
+      <li><strong>দাম বলুন:</strong> প্রতি দফায় একটা দাম বলুন। দোকানদার একটু কমিয়ে পাল্টা দাম বলবে।</li>
+      <li><strong>ধৈর্য:</strong> গোপন দামের অনেক নিচে বললে বা আগের চেয়ে কম বললে ধৈর্য কমে। শূন্য হলে খেলা শেষ।</li>
+      <li><strong>লক্ষণ:</strong> দোকানদার যখন খুব অল্প কমায়, তখন সে তার শেষ সীমার কাছে।</li>
+      <li><strong>৮ দফা:</strong> এর পরে দোকানদার লাস্ট প্রাইস বলে দেবে।</li>
+    </ul>
+    <h3>কৌশল কার্ড</h3>
+    <ul class="help-list" id="help-tactics"></ul>
+    <h3>খেতাব</h3>
+    <ul class="help-list" id="help-titles"></ul>
+    <p class="muted">দৈনিক দামাদামি সবার জন্য একই। একবারই খেলা যায়। প্রতিদিন রাত ১২টায় (ঢাকা সময়) নতুন দোকান খোলে।</p>
+  </form>
+</dialog>
+
+<dialog class="sheet" id="dlg-stats" aria-labelledby="stats-title">
+  <form method="dialog" class="sheet-inner">
+    <div class="sheet-head"><h2 id="stats-title">আপনার রেকর্ড</h2><button class="icon-btn" value="close" aria-label="বন্ধ করুন">✕</button></div>
+    <div class="stats-grid" id="stats-grid"></div>
+    <h3>দৈনিক খেতাব</h3>
+    <div class="dist" id="stats-dist"></div>
+    <p class="muted" id="stats-note"></p>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<!-- app:end -->
+
+<script src="js/data.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "damadami",
+  "version": "1.0.0",
+  "description": "দামাদামি — a daily Bangla bargaining game for the browser",
+  "private": true,
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "test": "node --test tests/engine.test.js",
+    "sim": "node tests/sim.js"
+  },
+  "license": "MIT"
+}
