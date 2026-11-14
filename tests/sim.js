@@ -18,13 +18,17 @@ const strategies = {
   },
   // offers 10% of the ask every round
   lowballer(state) {
-    while (state.phase === 'haggle') E.act(state, { t: 'offer', a: legal(state, state.opening * 0.1) });
+    while (state.phase === 'haggle' || state.phase === 'angry') {
+      if (state.phase === 'angry') { E.act(state, { t: 'sorry' }); continue; }
+      E.act(state, { t: 'offer', a: legal(state, state.opening * 0.1) });
+    }
     if (state.phase === 'final') E.act(state, { t: 'accept' });
   },
   // the usual instinct: start at half, creep up 5% of the opening each round
   half(state) {
     let o = state.opening * 0.5;
-    while (state.phase === 'haggle') {
+    while (state.phase === 'haggle' || state.phase === 'angry') {
+      if (state.phase === 'angry') { E.act(state, { t: 'leave' }); break; }
       E.act(state, { t: 'offer', a: legal(state, o) });
       o += state.opening * 0.05;
     }
@@ -35,13 +39,13 @@ const strategies = {
   smart(state) {
     let o = state.opening * 0.33;
     let lastAsk = state.ask;
-    const cards = ['flatter', 'student', 'cash', 'competitor'];
-    while (state.phase === 'haggle') {
+    const free = () => state.hand.filter((c) => c !== 'walk' && !state.used[c]);
+    while (state.phase === 'haggle' || state.phase === 'angry') {
+      if (state.phase === 'angry') { E.act(state, { t: 'sorry' }); o *= 1.05; continue; }
       const pct = state.patience / state.maxPatience;
       let card = null;
-      if (pct < 0.5 && !state.used.flatter) card = 'flatter';
-      else if (state.round === 1 && !state.used.student) card = 'student';
-      else if (state.round >= 3) card = cards.find((c) => !state.used[c]) || null;
+      if (pct < 0.5 && free().includes('flatter')) card = 'flatter';
+      else if (state.round >= 2 && state.round % 2 === 0) card = free()[0] || null;
       E.act(state, { t: 'offer', a: legal(state, o), k: card });
       if (state.phase !== 'haggle') break;
       const drop = (lastAsk - state.ask) / state.opening;
@@ -53,7 +57,10 @@ const strategies = {
       o += (state.ask - o) * (pct < 0.4 ? 0.3 : 0.12);
     }
     if (state.phase === 'walked') E.act(state, { t: 'back' });
-    while (state.phase === 'haggle') E.act(state, { t: 'offer', a: legal(state, (state.ask + o) / 2) });
+    while (state.phase === 'haggle' || state.phase === 'angry') {
+      if (state.phase === 'angry') { E.act(state, { t: 'leave' }); break; }
+      E.act(state, { t: 'offer', a: legal(state, (state.ask + o) / 2) });
+    }
     if (state.phase === 'final') E.act(state, { t: 'accept' });
   },
 };

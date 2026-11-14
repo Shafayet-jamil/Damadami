@@ -81,7 +81,7 @@
       <ol class="how-list">
         <li><strong>দাম বলুন।</strong> স্লাইডার টেনে আপনার দাম ঠিক করুন। চাইলে সাথে একটা কৌশল কার্ড খেলুন।</li>
         <li><strong>দোকানদারকে পড়ুন।</strong> সে যখন অল্প অল্প কমায়, বুঝবেন তার গোপন দামের কাছে চলে এসেছেন।</li>
-        <li><strong>ধৈর্য খেয়াল রাখুন।</strong> খুব কম দাম বললে মেজাজ চড়ে। ধৈর্য শূন্য হলে আর বেচবে না।</li>
+        <li><strong>ধৈর্য খেয়াল রাখুন।</strong> খুব কম দাম বললে মেজাজ চড়ে। ধৈর্য শূন্য হলে রেগে যাবে, তখন একবার মাফ চাওয়া যায়।</li>
       </ol>
     </section>
   </main>
@@ -141,7 +141,7 @@
       </div>
 
       <div class="tactics-head">
-        <span>কৌশল কার্ড</span><span class="muted">প্রতিটা একবারই খেলা যায়</span>
+        <span>অজুহাত কার্ড</span><span class="muted">প্রতি খেলায় নতুন ৯টা, প্রতিটা একবার</span>
       </div>
       <div class="tactics" id="tactics" role="group" aria-label="কৌশল কার্ড"></div>
 
@@ -157,6 +157,15 @@
       <div class="actions">
         <button class="btn btn-primary" id="btn-back" type="button">লজ্জা ভুলে ফিরে যাই</button>
         <button class="btn btn-ghost" id="btn-leave-walked" type="button">বাড়ি চলে যাই</button>
+      </div>
+    </section>
+
+    <!-- vendor lost his temper -->
+    <section class="controls choice" id="panel-angry" hidden>
+      <p class="choice-text">দোকানদার রেগে গেছে! একবার মাফ চাইলে আবার কথা বলবে, তবে দাম একটু বাড়বে।</p>
+      <div class="actions">
+        <button class="btn btn-primary" id="btn-sorry" type="button">🙏 মাফ চাই</button>
+        <button class="btn btn-ghost" id="btn-leave-angry" type="button">চলে যাই</button>
       </div>
     </section>
 
@@ -264,7 +273,8 @@
       <li><strong>দাম বলুন:</strong> প্রতি দফায় একটা দাম বলুন। দোকানদার একটু কমিয়ে পাল্টা দাম বলবে।</li>
       <li><strong>ধৈর্য:</strong> গোপন দামের অনেক নিচে বললে বা আগের চেয়ে কম বললে ধৈর্য কমে। শূন্য হলে খেলা শেষ।</li>
       <li><strong>লক্ষণ:</strong> দোকানদার যখন খুব অল্প কমায়, তখন সে তার শেষ সীমার কাছে।</li>
-      <li><strong>৮ দফা:</strong> এর পরে দোকানদার লাস্ট প্রাইস বলে দেবে।</li>
+      <li><strong>১৪ দফা:</strong> এর পরে দোকানদার লাস্ট প্রাইস বলে দেবে।</li>
+      <li><strong>রেগে গেলে:</strong> একবার মাফ চাওয়া যায়। দ্বিতীয়বার রাগলে আর বেচবে না।</li>
     </ul>
     <h3>কৌশল কার্ড</h3>
     <ul class="help-list" id="help-tactics"></ul>

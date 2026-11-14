@@ -17,8 +17,9 @@
   const EPOCH = Date.UTC(2026, 10, 5); // Dhaka date of daily deal #1
   const DHAKA_OFFSET = 6 * 3600 * 1000;
   const DAY = 24 * 3600 * 1000;
-  const MAX_ROUNDS = 8;
-  const BASE_COST = 6;
+  const MAX_ROUNDS = 14;
+  const BASE_COST = 4;
+  const HAND_SIZE = 9; // excuse cards dealt per game, "walk" included
 
   /* ---------- small helpers ---------- */
 
@@ -176,6 +177,17 @@
 
   /* ---------- setup ---------- */
 
+  // "walk" plus a seeded random draw of the other excuse cards
+  function dealHand(gen) {
+    const rest = DATA.tactics.filter((t) => t.id !== 'walk').map((t) => t.id);
+    for (let i = rest.length - 1; i > 0; i--) {
+      const j = Math.floor(nextRand(gen) * (i + 1));
+      [rest[i], rest[j]] = [rest[j], rest[i]];
+    }
+    return ['walk'].concat(rest.slice(0, HAND_SIZE - 1));
+  }
+  const tacticById = (id) => DATA.tactics.find((t) => t.id === id) || null;
+
   function createGame(setup) {
     const item = itemById(setup.itemId);
     const vendor = vendorById(setup.vendorId);
@@ -213,6 +225,8 @@
       paid: null,
       standMult: 1,
       lastLine: {},
+      apologized: false,
+      hand: dealHand(gen),
       rng: gen.rng,
     };
     vendorSays(state, ['greet'], { price: opening });
@@ -251,7 +265,7 @@
     if (!(O > 0) || O >= state.ask) throw new Error('Offer must be below the asking price');
     if (tacticId === 'walk') throw new Error('Use walkAway for the walk-away card');
     if (tacticId) {
-      if (!DATA.tactics.some((t) => t.id === tacticId)) throw new Error('Unknown tactic');
+      if (!tacticById(tacticId) || !state.hand.includes(tacticId)) throw new Error('That card is not in your hand');
       if (state.used[tacticId]) throw new Error('Tactic already used');
       state.used[tacticId] = true;
     }
@@ -266,12 +280,12 @@
     let cost = BASE_COST;
     let restore = 0;
     let concMult = 1;
-    let band = v.acceptBand + 0.015 * (state.round - 1);
+    let band = v.acceptBand + 0.008 * (state.round - 1);
     let reaction = null; // at most one reaction line before the counter
     let mood = null; // secondary reaction if no tactic reaction
 
     const lowball = Math.max(0, (F - O) / F);
-    cost += lowball * 60 * v.temper;
+    cost += lowball * 45 * v.temper;
     if (O < F * 0.45) {
       cost += 20;
       mood = 'insult';
@@ -284,45 +298,72 @@
       mood = mood || 'repeat';
     }
 
-    switch (tacticId) {
-      case 'student':
+    // excuse card effect, by its type (see the deck in js/data.js)
+    const card = tacticId ? tacticById(tacticId) : null;
+    const ok = (key) => (eff >= 1 ? key : key + 'Meh');
+    switch (card && card.effect) {
+      case 'sympathy':
         concMult *= 1 + 0.5 * eff;
-        cost -= 6 * eff;
+        cost -= 5 * eff;
         if (eff >= 1) state.standMult *= 1 - 0.15 * Math.min(eff, 2);
-        reaction = eff >= 1 ? 'student' : 'studentMeh';
+        reaction = ok(tacticId);
         break;
-      case 'competitor':
+      case 'pressure':
         if (O >= F * 0.8) {
           concMult *= 1 + 0.8 * eff;
           cost += 4;
           if (eff >= 1) state.standMult *= 1 - 0.2 * Math.min(eff, 1.5);
-          reaction = eff >= 1 ? 'competitor' : 'competitorMeh';
+          reaction = ok(tacticId);
         } else {
           concMult *= 0.6;
           cost += 12;
-          reaction = 'competitorNo';
+          reaction = tacticId + 'No';
         }
         break;
-      case 'flatter':
+      case 'charm':
         restore += 16 * eff;
         concMult *= 1 + 0.15 * eff;
-        reaction = eff >= 1 ? 'flatter' : 'flatterMeh';
+        reaction = ok(tacticId);
         break;
-      case 'cash':
+      case 'close':
         band += 0.07 * eff;
-        reaction = eff >= 1 ? 'cash' : 'cashMeh';
+        reaction = ok(tacticId);
         break;
-      case 'regular':
+      case 'risky':
         if (eff >= 1) {
           concMult *= 1 + 0.6 * eff;
           state.standMult *= 1 - 0.2 * Math.min(eff, 1.5);
-          reaction = 'regular';
+          reaction = tacticId;
         } else {
           concMult *= 0.5;
           cost += 18;
-          reaction = 'regularFail';
+          reaction = tacticId + 'No';
         }
         break;
+      case 'bulk':
+        concMult *= 1 + 0.6 * eff;
+        cost -= 2;
+        if (eff >= 1) state.standMult *= 1 - 0.12 * Math.min(eff, 2);
+        reaction = ok(tacticId);
+        break;
+      case 'flaw':
+        if (eff >= 1) {
+          concMult *= 1 + 0.7 * eff;
+          cost += 8;
+          state.standMult *= 1 - 0.15;
+        } else {
+          concMult *= 0.7;
+          cost += 14;
+        }
+        reaction = ok(tacticId);
+        break;
+      case 'late': {
+        const lateness = Math.max(0, state.round - 3);
+        concMult *= 1 + 0.06 * lateness * eff;
+        band += 0.008 * lateness * eff;
+        reaction = eff >= 1 && state.round >= 5 ? tacticId : tacticId + 'Meh';
+        break;
+      }
     }
 
     cost = Math.max(2, cost);
@@ -334,9 +375,7 @@
     const extra = { offer: O, prev: prev == null ? O : prev };
 
     if (state.patience <= 0) {
-      vendorSays(state, [lead, 'refuse'], extra, 'refuse');
-      state.row.push('💀');
-      finish(state, 'refused');
+      loseTemper(state, lead, extra);
       return;
     }
 
@@ -345,12 +384,12 @@
     const askFloor = Math.min(A, ceilTo(F, step));
     const stand = standPrice(state);
     const target = Math.max(O, stand);
-    const rate = Math.min(0.85, v.concession * (O >= F ? 1.6 : 1) * concMult);
+    const rate = Math.min(0.85, v.concession * (O >= F ? 1.3 : 1) * concMult);
     let next = A - (A - target) * rate + (nextRand(state) - 0.5) * 0.02 * A;
     next = clamp(roundTo(next, step), askFloor, A);
     if (next >= A && A - step >= askFloor && rate > 0.05) next = A - step;
 
-    const closeOut = O >= F && state.patience < 25;
+    const closeOut = O >= F && state.patience < 15;
     const deal = O >= F && (O >= next || next - O <= next * band || closeOut);
     if (deal) {
       state.ask = next;
@@ -374,6 +413,34 @@
       return;
     }
     vendorSays(state, [lead, counterKey, warnKey], Object.assign({}, extra, { price: next }), warnKey ? 'warn' : null);
+  }
+
+  /* The vendor snaps. The first time, the buyer may apologise and carry on;
+   * the second time he refuses to sell. */
+  function loseTemper(state, lead, extra) {
+    if (!state.apologized) {
+      vendorSays(state, [lead, 'refuse'], extra, 'refuse');
+      state.row.push('😠');
+      state.phase = 'angry';
+      return;
+    }
+    vendorSays(state, [lead, 'refuse'], extra, 'refuse');
+    state.row.push('💀');
+    finish(state, 'refused');
+  }
+
+  function apologize(state) {
+    if (state.phase !== 'angry') throw new Error('Nothing to apologise for');
+    state.apologized = true;
+    const raised = Math.min(state.opening, tidy(state.ask * 1.06));
+    if (raised !== state.ask) state.asks.push(raised);
+    state.ask = raised;
+    state.patience = Math.round(state.maxPatience * 0.35);
+    state.phase = 'haggle';
+    buyerSays(state, DATA.player.sorry, {});
+    vendorSays(state, ['forgive'], { price: raised });
+    state.row.push('🙏');
+    checkRounds(state);
   }
 
   function walkAway(state) {
@@ -456,6 +523,7 @@
       case 'offer': res = makeOffer(state, action.a, action.k || null); break;
       case 'walk': res = walkAway(state); break;
       case 'back': res = goBack(state); break;
+      case 'sorry': res = apologize(state); break;
       case 'accept': res = acceptAsk(state); break;
       case 'leave': res = leave(state); break;
       default: throw new Error('Unknown action ' + action.t);
@@ -590,6 +658,7 @@
 
   return {
     MAX_ROUNDS,
+    HAND_SIZE,
     MAX_PRICE,
     spokenPrices,
     speechParts,

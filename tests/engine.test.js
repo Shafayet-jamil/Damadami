@@ -5,6 +5,11 @@ const assert = require('node:assert/strict');
 const E = require('../js/engine.js');
 const D = require('../js/data.js');
 
+function card(state, n) {
+  const cards = state.hand.filter((id) => id !== 'walk' && !state.used[id]);
+  return cards.length ? cards[(n || 0) % cards.length] : null;
+}
+
 function legal(state, x) {
   const lim = E.offerLimits(state);
   return Math.max(lim.min, Math.min(lim.max, E.roundTo(x, lim.step)));
@@ -49,7 +54,8 @@ test('a deal is never below the secret floor, across many games', () => {
     for (let i = 0; i < 150; i++) {
       const s = E.createGame({ itemId: D.items[i % D.items.length].id, vendorId: v.id, seed: i + 1 });
       let o = s.opening * (0.2 + (i % 7) * 0.05);
-      while (s.phase === 'haggle') {
+      while (s.phase === 'haggle' || s.phase === 'angry') {
+        if (s.phase === 'angry') { E.act(s, { t: i % 3 ? 'sorry' : 'leave' }); continue; }
         if (s.round === 3 && !s.used.walk && i % 2) E.act(s, { t: 'walk' });
         else E.act(s, { t: 'offer', a: legal(s, o) });
         o += s.opening * 0.04;
@@ -75,9 +81,17 @@ test('asks only ever go down, except after walking back in shame', () => {
   }
 });
 
-test('insulting offers make the vendor refuse', () => {
+test('insulting offers anger the vendor; one apology is allowed, then he refuses', () => {
   const s = E.createGame({ itemId: 'saree', vendorId: 'rahim', seed: 5 });
   while (s.phase === 'haggle') E.act(s, { t: 'offer', a: legal(s, 1) });
+  assert.equal(s.phase, 'angry');
+  const askBefore = s.ask;
+  E.act(s, { t: 'sorry' });
+  assert.equal(s.phase, 'haggle');
+  assert.ok(s.ask >= askBefore);
+  assert.throws(() => E.act(s, { t: 'sorry' }));
+  while (s.phase === 'haggle') E.act(s, { t: 'offer', a: legal(s, 1) });
+  assert.equal(s.phase, 'over');
   assert.equal(s.outcome, 'refused');
   assert.equal(E.result(s).title.id, 'none');
 });
@@ -117,8 +131,11 @@ test('a failed bluff can be undone by walking back, at a higher price', () => {
 
 test('each tactic card can be used once', () => {
   const s = E.createGame({ itemId: 'saree', vendorId: 'suman', seed: 8 });
-  E.act(s, { t: 'offer', a: legal(s, s.opening * 0.4), k: 'flatter' });
-  assert.throws(() => E.act(s, { t: 'offer', a: legal(s, s.opening * 0.42), k: 'flatter' }));
+  const k = card(s);
+  E.act(s, { t: 'offer', a: legal(s, s.opening * 0.4), k });
+  assert.throws(() => E.act(s, { t: 'offer', a: legal(s, s.opening * 0.42), k }));
+  const missing = D.tactics.find((t) => !s.hand.includes(t.id));
+  assert.throws(() => E.act(s, { t: 'offer', a: legal(s, s.opening * 0.43), k: missing.id }), 'cards outside the hand are refused');
 });
 
 test('the game ends with a last price after the maximum rounds', () => {
@@ -157,19 +174,16 @@ test('share text has the deal number, prices and title', () => {
 
 test('every spoken price has a recording and every line has a speech plan', () => {
   const grid = new Set(E.spokenPrices());
-  const cards = ['student', 'competitor', 'flatter', 'cash', 'regular'];
   for (const v of D.vendors) {
     for (let i = 0; i < 120; i++) {
       const item = D.items[i % D.items.length];
       const s = E.createGame({ itemId: item.id, vendorId: v.id, seed: 3000 + i });
       let o = s.opening * (0.15 + (i % 5) * 0.06);
-      while (s.phase === 'haggle' || s.phase === 'walked') {
+      while (s.phase === 'haggle' || s.phase === 'walked' || s.phase === 'angry') {
         if (s.phase === 'walked') { E.act(s, { t: 'back' }); continue; }
+        if (s.phase === 'angry') { E.act(s, { t: 'sorry' }); continue; }
         if (s.round === 2 && !s.used.walk) E.act(s, { t: 'walk' });
-        else {
-          const k = cards[s.round % 5];
-          E.act(s, { t: 'offer', a: legal(s, o), k: s.used[k] ? null : k });
-        }
+        else E.act(s, { t: 'offer', a: legal(s, o), k: s.round % 2 ? card(s, i) : null });
         o += s.opening * 0.05;
       }
       if (s.phase === 'final') E.act(s, { t: 'accept' });
@@ -208,15 +222,42 @@ test('a vendor never repeats the same counter line back to back', () => {
   for (let i = 1; i < vendorLines.length; i++) assert.notEqual(vendorLines[i], vendorLines[i - 1]);
 });
 
+test('every excuse card works with every vendor and has its lines', () => {
+  for (const v of D.vendors) {
+    for (const t of D.tactics.filter((x) => x.id !== 'walk')) {
+      let s = null;
+      for (let seed = 1; seed < 400 && !s; seed++) {
+        const g = E.createGame({ itemId: 'panjabi', vendorId: v.id, seed });
+        if (g.hand.includes(t.id)) s = g;
+      }
+      assert.ok(s, `${t.id} never dealt for ${v.id}`);
+      E.act(s, { t: 'offer', a: legal(s, s.floor * 0.95), k: t.id });
+      const reply = s.log[s.log.length - 1];
+      assert.equal(reply.who, 'vendor');
+      assert.ok(!/\{\w+\}/.test(reply.text) && reply.text.length > 3, `${v.id}/${t.id}: ${reply.text}`);
+      assert.ok(D.player[t.id], 'buyer line for ' + t.id);
+    }
+  }
+});
+
+test('a hand has 9 different cards including the walk-away', () => {
+  for (let seed = 1; seed < 50; seed++) {
+    const s = E.createGame({ itemId: 'panjabi', vendorId: 'suman', seed });
+    assert.equal(s.hand.length, E.HAND_SIZE);
+    assert.equal(new Set(s.hand).size, s.hand.length);
+    assert.ok(s.hand.includes('walk'));
+  }
+});
+
 test('no dialogue line is left with an unfilled placeholder', () => {
   for (const v of D.vendors) {
     for (let i = 0; i < 60; i++) {
       const s = E.createGame({ itemId: D.items[i % D.items.length].id, vendorId: v.id, seed: 500 + i });
-      const cards = ['student', 'competitor', 'flatter', 'cash', 'regular'];
       let o = s.opening * 0.2;
-      while (s.phase === 'haggle') {
+      while (s.phase === 'haggle' || s.phase === 'angry') {
+        if (s.phase === 'angry') { E.act(s, { t: 'sorry' }); continue; }
         if (s.round === 2 && !s.used.walk) E.act(s, { t: 'walk' });
-        else E.act(s, { t: 'offer', a: legal(s, o), k: cards[s.round % 5] && !s.used[cards[s.round % 5]] ? cards[s.round % 5] : null });
+        else E.act(s, { t: 'offer', a: legal(s, o), k: card(s, i + s.round) });
         o += s.opening * 0.06;
       }
       if (s.phase === 'walked') E.act(s, { t: 'back' });

@@ -342,6 +342,7 @@
 
     $('panel-haggle').hidden = g.phase !== 'haggle';
     $('panel-walked').hidden = g.phase !== 'walked';
+    $('panel-angry').hidden = g.phase !== 'angry';
     $('panel-final').hidden = g.phase !== 'final';
     $('panel-result').hidden = g.phase !== 'over';
     if (g.phase === 'final') $('final-price').textContent = E.taka(g.ask);
@@ -352,7 +353,8 @@
   function buildTactics() {
     const box = $('tactics');
     box.textContent = '';
-    for (const t of D.tactics) {
+    for (const id of game.hand) {
+      const t = D.tactics.find((x) => x.id === id);
       const b = el('button', 'card');
       b.type = 'button';
       b.dataset.tactic = t.id;
@@ -431,7 +433,7 @@
 
   function setBusy(on) {
     busy = on;
-    for (const id of ['btn-offer', 'btn-accept', 'offer-range', 'offer-minus', 'offer-plus', 'btn-back', 'btn-leave-walked', 'btn-final-accept', 'btn-final-leave']) {
+    for (const id of ['btn-offer', 'btn-accept', 'offer-range', 'offer-minus', 'offer-plus', 'btn-back', 'btn-leave-walked', 'btn-sorry', 'btn-leave-angry', 'btn-final-accept', 'btn-final-leave']) {
       $(id).disabled = on;
     }
     for (const b of $('tactics').children) if (on) b.disabled = true;
@@ -483,7 +485,7 @@
   /* ---------- result ---------- */
   function showResult() {
     const r = E.result(game);
-    for (const id of ['panel-haggle', 'panel-walked', 'panel-final']) $(id).hidden = true;
+    for (const id of ['panel-haggle', 'panel-walked', 'panel-angry', 'panel-final']) $(id).hidden = true;
     $('panel-result').hidden = false;
 
     $('r-kicker').textContent =
@@ -725,6 +727,8 @@
     $('btn-accept').addEventListener('click', () => doAction({ t: 'accept' }));
     $('btn-back').addEventListener('click', () => doAction({ t: 'back' }));
     $('btn-leave-walked').addEventListener('click', () => doAction({ t: 'leave' }));
+    $('btn-sorry').addEventListener('click', () => doAction({ t: 'sorry' }));
+    $('btn-leave-angry').addEventListener('click', () => doAction({ t: 'leave' }));
     $('btn-final-accept').addEventListener('click', () => doAction({ t: 'accept' }));
     $('btn-final-leave').addEventListener('click', () => doAction({ t: 'leave' }));
 

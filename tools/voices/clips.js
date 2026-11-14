@@ -11,17 +11,19 @@ const D = require('../../js/data.js');
 const E = require('../../js/engine.js');
 const V = require('../../js/voice.js');
 
-/* Each character = one of the two base voices + their own pitch (semitones) and speed. */
+/* Each character: gender of the Bangla Parler voice, the seed that picks their own
+ * reference voice (Parler gives a different speaker per seed), and a pitch (semitones)
+ * and speed applied at packing time for personality. */
 const SPEAKERS = {
-  tutul:    { model: 'male',   pitch: 2.5,  tempo: 1.10 },
-  nasima:   { model: 'female', pitch: -1.5, tempo: 0.90 },
-  suman:    { model: 'male',   pitch: 1.0,  tempo: 1.14 },
-  rahim:    { model: 'male',   pitch: -3.0, tempo: 0.86 },
-  jamal:    { model: 'male',   pitch: -1.5, tempo: 0.94 },
-  shirin:   { model: 'female', pitch: 1.0,  tempo: 1.04 },
-  buyer_m:  { model: 'male',   pitch: 0.5,  tempo: 1.02 },
-  buyer_f:  { model: 'female', pitch: 0.0,  tempo: 1.02 },
-  narrator: { model: 'female', pitch: 0.5,  tempo: 0.97 },
+  tutul:    { gender: 'male',   refSeed: 11, pitch: 1.5,  tempo: 1.10 },
+  nasima:   { gender: 'female', refSeed: 23, pitch: -1.0, tempo: 0.92 },
+  suman:    { gender: 'male',   refSeed: 37, pitch: 0.5,  tempo: 1.12 },
+  rahim:    { gender: 'male',   refSeed: 41, pitch: -2.0, tempo: 0.88 },
+  jamal:    { gender: 'male',   refSeed: 53, pitch: -1.0, tempo: 0.95 },
+  shirin:   { gender: 'female', refSeed: 67, pitch: 0.5,  tempo: 1.05 },
+  buyer_m:  { gender: 'male',   refSeed: 71, pitch: 0.0,  tempo: 1.0 },
+  buyer_f:  { gender: 'female', refSeed: 83, pitch: 0.0,  tempo: 1.0 },
+  narrator: { gender: 'female', refSeed: 97, pitch: 0.0,  tempo: 0.97 },
 };
 
 function vendorTemplates(v) {
