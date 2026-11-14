@@ -26,7 +26,15 @@ DESC = {
     'female': 'A Bengali female speaker speaks at a moderate pace in a very clear recording.',
 }
 REF_TEXT = 'আজকে বাজারে অনেক ভিড়। সবাই ঈদের কেনাকাটা করতেছে, দোকানে দোকানে দামাদামি চলতেছে। আপনিও আসেন, দেখেন, পছন্দ হলে নিয়ে যান।'
-BATCH = int(os.environ.get('PARLER_BATCH', '4'))
+# Batching changes Parler's output (short phrases pick up extra audio), so default to 1.
+BATCH = int(os.environ.get('PARLER_BATCH', '1'))
+RETRIES = 4
+
+
+def plausible(text, seconds):
+    """How far a recording's length is from what the text should take (1.0 = spot on)."""
+    expected = 0.3 + 0.085 * len(text.replace(' ', ''))
+    return seconds / expected
 
 
 def save(path, wav, sr):
@@ -87,7 +95,18 @@ def main():
         batch = [x for x in pending[i:i + BATCH] if x[0] == g]
         waves = generate(g, [t for _, t, _ in batch], 1000 + i)
         for (gg, t, k), w in zip(batch, waves):
-            save(os.path.join(cache, 'base', gg, k + '.wav'), w, sr)
+            # a take far too short or too long for its text is usually garbled: try other seeds
+            best, best_score = w, abs(np.log(max(1e-3, plausible(t, len(w) / sr))))
+            attempt = 0
+            while best_score > np.log(2.0) and attempt < RETRIES:
+                attempt += 1
+                alt = generate(gg, [t], 5000 + i * 10 + attempt)[0]
+                score = abs(np.log(max(1e-3, plausible(t, len(alt) / sr))))
+                if score < best_score:
+                    best, best_score = alt, score
+            if attempt:
+                print(f'  retried "{t}" {attempt}x, length ratio now {np.exp(best_score):.2f}', flush=True)
+            save(os.path.join(cache, 'base', gg, k + '.wav'), best, sr)
         i += len(batch)
         done += len(batch)
         rate = (time.time() - t_start) / done

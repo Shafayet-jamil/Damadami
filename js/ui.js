@@ -224,7 +224,7 @@
     const st = V.status();
     if (st === 'unsupported') box.textContent = 'এই ব্রাউজারে শব্দ চালানো যায় না। Chrome, Edge বা Safari দিয়ে খুলে দেখুন।';
     else if (st === 'failed') box.textContent = 'কণ্ঠের ফাইল লোড হয়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।';
-    else box.textContent = 'সব কণ্ঠ গেমের ভেতরেই আছে, আলাদা কিছু ডাউনলোড বা ইনস্টল করতে হবে না। কণ্ঠের মডেল: SYSPIN, IISc Bangalore (CC-BY 4.0)।';
+    else box.textContent = 'সব কণ্ঠ গেমের ভেতরেই আছে, আলাদা কিছু ডাউনলোড বা ইনস্টল করতে হবে না। কণ্ঠ তৈরি: Bangla Parler-TTS (Apache 2.0) ও Chatterbox (MIT)।';
   }
 
   /* ---------- game rendering ---------- */

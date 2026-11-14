@@ -10,17 +10,21 @@ It's a static web page: no install, no account, no backend. It runs on low-end p
 
 - **Make an offer** with the slider. The vendor counters with a lower price.
 - **Read the vendor.** When he only drops a little, you're close to his limit.
-- **Watch his patience.** Offers far below his floor, or lower than your last offer, make him angry. At zero he refuses to sell.
-- **Play tactic cards.** Each can be used once per haggle, and each vendor reacts differently:
+- **Watch his patience.** Offers far below his floor, or lower than your last offer, make him angry. At zero he loses his temper: you can **apologise once** and carry on at a slightly higher price. The second time, he refuses to sell.
+- **Play excuse cards.** Each game deals you 9 of the 15 cards (always including 🚶 আমি গেলাম). Each can be used once, and every vendor reacts differently:
   | Card | Effect |
   |---|---|
   | 🚶 আমি গেলাম | Walk away at your last offer. He may call you back, meet you halfway, or let you go. You can walk back in, at a higher price. |
-  | 🎓 স্টুডেন্ট মানুষ | Sympathy. Works best on নাসিমা খালা. |
-  | 🏪 পাশের দোকানে কম | Competitor price. Only believable if your offer is near his floor. |
+  | 🎓 স্টুডেন্ট মানুষ · 👩 আম্মু পাঠাইছে · 🎁 বিয়ের উপহার · 🧑‍🤝‍🧑 বন্ধুদের আনবো | Sympathy. নাসিমা খালা melts; others shrug. |
+  | 🏪 পাশের দোকানে কম · 📱 অনলাইনে কম · 👛 পকেটে এর বেশি নাই | Pressure. Only believable if your offer is near his floor, otherwise it backfires. |
   | 😍 মাল তো সেরা! | Flattery restores patience. Useless on রহিম চাচা. |
   | 💵 এখনই ক্যাশ | Makes him more willing to close. জামাল মিয়া loves it. |
-  | 🤝 পুরান কাস্টমার | Big discount if he plays along. Backfires on vendors who keep records. |
-- **8 rounds** maximum, then he gives a final price.
+  | 🤝 পুরান কাস্টমার · 📅 আগেরবার কম নিছিলেন | Big discount if he plays along; a telling-off if he doesn't. |
+  | 🛍️ দুইটা নিবো | Buying two gets a better price per piece. |
+  | 🔍 এইখানে দাগ আছে | Pointing out a flaw drops the price but annoys him. |
+  | 🌙 দোকান বন্ধের সময় | Closing time: stronger the longer the haggle has gone on. |
+- **14 rounds** maximum, then he gives a final price.
+- **67 items** from New Market, Gausia, Bangabazar, Karwan Bazar, Motaleb Plaza, Nilkhet, Nawabpur, Chawkbazar and more.
 
 ### Modes
 
@@ -66,33 +70,27 @@ Every line in the conversation is spoken aloud, each character in their own voic
 - Each character is one MP3 (about 0.3–0.9 MB) plus `voices/manifest.json`, which says where each clip sits in it. A game loads only its vendor, the buyer voice and the announcer, and the offline cache keeps them after the first play.
 - The voices need the game served over http(s) (GitHub Pages, or `python3 -m http.server`). Opened straight from a file, the browser blocks loading them and the game plays silently.
 
-**Voice credit:** generated with the SYSPIN Bangla VITS voices from IISc Bangalore ([female](https://huggingface.co/SYSPIN/tts_vits_coquiai_BengaliFemale), CC-BY 4.0; [male](https://huggingface.co/SYSPIN/tts_vits_coquiai_BengaliMale), same project, its page lists no license). Keep this credit wherever the game is published.
+**How they're made:** every phrase is recorded with **Bangla Parler-TTS** ([Tanmoyshome/bn-parler-tts](https://huggingface.co/Tanmoyshome/bn-parler-tts), Apache 2.0), a fine-tune of AI4Bharat's Indic Parler-TTS on SUST's Bangladeshi SUBAK.KO speech corpus. Parler gives a different speaker each time it speaks, so every clip is then converted onto one fixed reference voice per character with Resemble AI's **Chatterbox** voice converter ([ResembleAI/chatterbox](https://huggingface.co/ResembleAI/chatterbox), MIT; it adds Resemble's inaudible Perth watermark). Keep these credits wherever the game is published.
 
 #### Regenerating the voices
 
-Re-run this after changing any dialogue in `js/data.js` (a test fails if a line has no recording):
+Re-run this after changing any dialogue in `js/data.js` (a test fails if a line has no recording). It needs three Python environments, because the two models want different library versions:
+
+- one with `parler_tts` (it installs transformers 4.46) and torch,
+- one with `chatterbox-tts`,
+- one with numpy and scipy, plus ffmpeg with the rubberband filter.
 
 ```bash
-pip install torch numpy scipy
+PARLER_PY=/path/to/parler/python VC_PY=/path/to/chatterbox/python PACK_PY=python3 tools/voices/record_all.sh /tmp/damadami-voices
 ```
 
-```bash
-tools/voices/fetch_models.sh
-```
+It runs three resumable stages:
 
-```bash
-node tools/voices/clips.js > /tmp/jobs.json
-```
+1. `parler_render.py` records each distinct phrase once per gender, one at a time (batching garbles short phrases), re-recording takes whose length doesn't fit the text, plus a 10-second reference voice per character (`refSeed` in `clips.js` picks which voice).
+2. `vc_render.py` converts every clip onto its character's reference voice.
+3. `build.py` trims and levels each clip, applies the character's pitch and speed, and packs one MP3 per character; `check.py` verifies every clip sits where the manifest says.
 
-```bash
-cd tools/voices && python build.py /tmp/jobs.json ../../voices
-```
-
-```bash
-python tools/voices/check.py voices/
-```
-
-`clips.js` lists every phrase each character can say, straight from the game's dialogue. `build.py` records them, trims and levels each clip, applies the character's pitch and speed (set in `clips.js`), and packs one MP3 per character (about 10 minutes on a 4-core CPU, no GPU needed). `check.py` verifies that every clip sits where the manifest says. Requires ffmpeg with the rubberband filter.
+On a 4-core CPU with no GPU, a full run takes about 4–5 hours.
 
 ## Run it
 
@@ -115,7 +113,7 @@ js/data.js            items, vendors, tactic cards, Bangla dialogue, titles
 js/engine.js          negotiation rules (pure logic, no DOM; runs in Node too)
 js/voice.js           plays the built-in voices; price-to-words
 voices/               recorded character voices (one MP3 each + manifest.json)
-tools/voices/         scripts that generate the voices
+tools/voices/         scripts that record the voices (record_all.sh runs them)
 js/ui.js              screens, animation, storage, sharing
 sw.js                 offline cache
 tests/engine.test.js  engine unit tests
