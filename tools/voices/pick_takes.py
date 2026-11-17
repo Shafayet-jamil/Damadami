@@ -52,7 +52,10 @@ def main():
         base = os.path.join(cache, 'base', r['gender'], r['key'] + '.wav')
         best, best_score = None, r['cer']
         for take in sorted(glob.glob(os.path.join(cache, 'takes', r['gender'], r['key'] + '_*.wav'))):
-            s = score(take, r['text'])
+            try:
+                s = score(take, r['text'])
+            except ValueError:  # an unreadable (e.g. empty) take
+                continue
             if s < best_score:
                 best, best_score = take, s
         if best:
