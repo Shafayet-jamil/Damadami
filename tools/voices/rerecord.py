@@ -44,7 +44,9 @@ def main():
             with torch.no_grad():
                 wav = model.generate(input_ids=d.input_ids, attention_mask=d.attention_mask,
                                      prompt_input_ids=p.input_ids, prompt_attention_mask=p.attention_mask)
-            wav = wav.cpu().numpy().squeeze().astype(np.float32)
+            wav = np.atleast_1d(wav.cpu().numpy().squeeze()).astype(np.float32)
+            if len(wav) < sr // 10:  # an empty take: skip it, the other takes remain
+                continue
             wav = wav / max(1e-6, float(np.max(np.abs(wav)))) * 0.9
             wavfile.write(path, sr, (wav * 32767).astype(np.int16))
         print(f'{n}/{len(bad)} phrases, {(time.time() - t0) / n:.0f}s each', flush=True)
