@@ -1,5 +1,5 @@
 /* Offline support: cache the game shell so it opens without data after the first visit. */
-const CACHE = 'damadami-v3';
+const CACHE = 'damadami-v4';
 const SHELL = ['./', 'index.html', 'css/style.css', 'js/data.js', 'js/engine.js', 'js/voice.js', 'js/ui.js', 'assets/icon.svg', 'manifest.webmanifest', 'voices/manifest.json'];
 
 self.addEventListener('install', (event) => {
@@ -29,6 +29,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith('/_vercel/')) return; // analytics: never cache, never serve offline
   event.respondWith(
     fetch(req)
       .then((res) => {
