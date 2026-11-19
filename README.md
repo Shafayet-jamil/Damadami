@@ -23,6 +23,8 @@ It's a static web page: no install, no account, no backend. It runs on low-end p
   | 🛍️ দুইটা নিবো | Buying two gets a better price per piece. |
   | 🔍 এইখানে দাগ আছে | Pointing out a flaw drops the price but annoys him. |
   | 🌙 দোকান বন্ধের সময় | Closing time: stronger the longer the haggle has gone on. |
+- **Give your own excuse.** The ✍️ নিজের অজুহাত card lets you type a reason in Bangla or Banglish, e.g. "bondhu der anbo". It is matched by keyword to the card it resembles (and then works and is answered like that card, which also uses the card up). A reason that matches no card gets a small pity discount that fades with each use. Up to 3 per game. Your words are shown but not voiced; only the price that follows them is.
+- **Don't like the product?** Tap 🔄 অন্য জিনিস to get the next one from the same shop. In practice you can switch any time; in the daily deal or a friend's challenge it is offered before your first move and switches you to practice.
 - **14 rounds** maximum, then he gives a final price.
 - **67 items** from New Market, Gausia, Bangabazar, Karwan Bazar, Motaleb Plaza, Nilkhet, Nawabpur, Chawkbazar and more.
 

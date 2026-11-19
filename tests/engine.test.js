@@ -265,3 +265,46 @@ test('no dialogue line is left with an unfilled placeholder', () => {
     }
   }
 });
+
+test('own excuses are matched to the card they resemble', () => {
+  assert.equal(E.classifyReason('bundu der anbo'), 'friends');
+  assert.equal(E.classifyReason('আমার বন্ধুদের নিয়ে আসবো'), 'friends');
+  assert.equal(E.classifyReason('ami student vai'), 'student');
+  assert.equal(E.classifyReason('পকেটে টাকা নাই'), 'budget');
+  assert.equal(E.classifyReason('pasher dokane 300 bolse'), 'competitor');
+  assert.equal(E.classifyReason('এইখানে ছেঁড়া'), 'defect');
+  assert.equal(E.classifyReason('আমার বিয়ে সামনে'), 'gift'); // য় written as য + ়
+  assert.equal(E.classifyReason('আমার বিয়ে সামনে'), 'gift'); // precomposed য়
+  assert.equal(E.classifyReason('আজকে আমার মন খারাপ'), null);
+});
+
+test('an own excuse is spoken, reacted to, used up and replayable', () => {
+  const setup = { mode: 'practice', itemId: 'panjabi', vendorId: 'nasima', seed: 7 };
+  const s = E.createGame(setup);
+  const a1 = { t: 'offer', a: legal(s, s.ask * 0.7), k: 'custom', x: '  bundu der   anbo ' };
+  E.act(s, a1);
+  const buyer = s.log.filter((m) => m.who === 'buyer').pop();
+  assert.match(buyer.text, /^bundu der anbo, /);
+  assert.ok(buyer.speech.some((p) => p.p) && !buyer.speech.some((p) => p.s && /bundu/.test(p.s)));
+  assert.equal(s.used.friends, true, 'matched card counts as used');
+  const vendor = s.log.filter((m) => m.who === 'vendor').pop();
+  assert.ok(D.lines.friends.concat(D.lines.friendsMeh).some((l) => vendor.text.startsWith(l.split('{')[0].trim())), vendor.text);
+
+  // same excuse again falls flat, a new one gets the general reaction
+  if (s.phase === 'haggle') E.act(s, { t: 'offer', a: legal(s, s.ask * 0.85), k: 'custom', x: 'বন্ধুদের পাঠাবো' });
+  if (s.phase === 'haggle') E.act(s, { t: 'offer', a: legal(s, s.ask * 0.9), k: 'custom', x: 'মন খারাপ আজকে' });
+  if (s.phase === 'haggle') {
+    assert.equal(s.customUsed, 3);
+    assert.throws(() => E.act(s, { t: 'offer', a: legal(s, s.ask * 0.95), k: 'custom', x: 'আরেকটা কারণ' }));
+  }
+  const again = E.replay(setup, s.actions);
+  assert.deepEqual(again.log, s.log);
+});
+
+test('own excuses must be a sensible length', () => {
+  const s = E.createGame({ mode: 'practice', itemId: 'panjabi', vendorId: 'tutul', seed: 3 });
+  assert.throws(() => E.act(s, { t: 'offer', a: legal(s, s.ask * 0.7), k: 'custom', x: ' a ' }));
+  assert.throws(() => E.act(s, { t: 'offer', a: legal(s, s.ask * 0.7), k: 'custom', x: 'x'.repeat(81) }));
+  assert.equal(s.round, 0);
+  assert.equal(s.customUsed, 0);
+});

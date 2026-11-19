@@ -120,6 +120,35 @@
   function startPractice() {
     startGame(E.practiceSetup(), {});
   }
+  /* "অন্য জিনিস": the same shop, the next product (shuffled, so every product comes round) */
+  let itemQueue = [];
+  function nextItemId(current) {
+    if (!itemQueue.length) {
+      itemQueue = D.items.map((x) => x.id);
+      for (let i = itemQueue.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [itemQueue[i], itemQueue[j]] = [itemQueue[j], itemQueue[i]];
+      }
+    }
+    let id = itemQueue.pop();
+    if (id === current) id = nextItemId(current);
+    return id;
+  }
+  function canChangeItem() {
+    if (!game || game.phase === 'over') return false;
+    // the daily and a friend's challenge count from the first move
+    return ctx.mode === 'practice' || game.actions.length === 0;
+  }
+  function changeItem() {
+    if (busy || !canChangeItem()) return;
+    V.stop();
+    const from = ctx.mode;
+    const seed = (Math.random() * 4294967296) >>> 0;
+    startGame({ mode: 'practice', itemId: nextItemId(game.item.id), vendorId: game.vendor.id, seed }, {});
+    if (from === 'daily') toast('অনুশীলনে চলে এলেন। আজকের দামাদামি পরে হোম থেকে খেলতে পারবেন।');
+    else if (from === 'duel') toast('অনুশীলনে চলে এলেন। বন্ধুর কোড দিয়ে চ্যালেঞ্জটা আবার খেলতে পারবেন।');
+  }
+
   function startDuel(setup, code) {
     startGame(setup, { shopName: setup.name || '', code });
   }
@@ -346,6 +375,7 @@
     $('panel-final').hidden = g.phase !== 'final';
     $('panel-result').hidden = g.phase !== 'over';
     if (g.phase === 'final') $('final-price').textContent = E.taka(g.ask);
+    $('btn-next-item').hidden = !canChangeItem();
     if (g.phase === 'haggle') renderControls(true);
   }
 
@@ -367,6 +397,36 @@
       });
       box.append(b);
     }
+    const c = el('button', 'card card-custom');
+    c.type = 'button';
+    c.dataset.tactic = 'custom';
+    c.setAttribute('aria-pressed', 'false');
+    c.append(el('span', 'card-icon', '✍️'), el('span', 'card-name', 'নিজের অজুহাত'), el('span', 'card-hint', ''));
+    c.addEventListener('click', () => {
+      if (busy) return;
+      selectedTactic = selectedTactic === 'custom' ? null : 'custom';
+      renderControls(false);
+      if (selectedTactic === 'custom') $('custom-input').focus();
+    });
+    box.append(c);
+    $('custom-input').value = '';
+  }
+
+  function customLeft() {
+    return E.MAX_CUSTOM - (game.customUsed || 0);
+  }
+  function updateCustomHint() {
+    const text = $('custom-input').value.trim();
+    const match = text.length >= 3 ? E.classifyReason(text) : null;
+    const t = match && D.tactics.find((x) => x.id === match);
+    $('custom-hint').textContent =
+      text.length < 3
+        ? 'বাংলা বা Banglish, যেভাবে খুশি লিখুন। দোকানদার বুঝে উত্তর দেবে।'
+        : t && game.used[match]
+          ? 'এই অজুহাত আগেই দিয়েছেন, এবার আর কাজে দেবে না।'
+          : t
+            ? 'দোকানদার এটাকে ধরবে ' + t.icon + ' ' + t.name + ' হিসেবে।'
+            : 'নতুন ধরনের অজুহাত। একটু মায়া লাগতে পারে, তবে বারবার না।';
   }
 
   function renderControls(resetValue) {
@@ -388,12 +448,22 @@
 
     for (const b of $('tactics').children) {
       const id = b.dataset.tactic;
+      if (id === 'custom') {
+        const left = customLeft();
+        b.classList.toggle('used', left <= 0);
+        b.disabled = left <= 0;
+        b.setAttribute('aria-pressed', String(selectedTactic === id));
+        b.lastElementChild.textContent = left > 0 ? 'নিজের কথায় বলুন · আর ' + E.bn(left) + ' বার' : 'আর বলা যাবে না';
+        continue;
+      }
       const used = !!g.used[id];
       b.classList.toggle('used', used);
       b.disabled = used || (id === 'walk' && g.lastOffer == null);
       b.setAttribute('aria-pressed', String(selectedTactic === id));
       b.title = id === 'walk' && g.lastOffer == null ? 'আগে অন্তত একবার দাম বলুন' : '';
     }
+    $('custom-row').hidden = selectedTactic !== 'custom';
+    if (selectedTactic === 'custom') updateCustomHint();
     $('btn-accept').textContent = E.taka(g.ask) + '-তেই নিলাম';
     updateOfferLabel();
   }
@@ -411,7 +481,7 @@
     const min = Number(range.min);
     const max = Number(range.max);
     range.style.setProperty('--fill', (max > min ? ((offerValue() - min) / (max - min)) * 100 : 100) + '%');
-    const t = D.tactics.find((x) => x.id === selectedTactic);
+    const t = selectedTactic === 'custom' ? { icon: '✍️' } : D.tactics.find((x) => x.id === selectedTactic);
     const btn = $('btn-offer');
     if (walking) {
       btn.textContent = '🚶 ' + E.taka(g.lastOffer) + ' বলে হাঁটা দিন';
@@ -433,7 +503,7 @@
 
   function setBusy(on) {
     busy = on;
-    for (const id of ['btn-offer', 'btn-accept', 'offer-range', 'offer-minus', 'offer-plus', 'btn-back', 'btn-leave-walked', 'btn-sorry', 'btn-leave-angry', 'btn-final-accept', 'btn-final-leave']) {
+    for (const id of ['btn-offer', 'btn-accept', 'offer-range', 'offer-minus', 'offer-plus', 'custom-input', 'btn-next-item', 'btn-back', 'btn-leave-walked', 'btn-sorry', 'btn-leave-angry', 'btn-final-accept', 'btn-final-leave']) {
       $(id).disabled = on;
     }
     for (const b of $('tactics').children) if (on) b.disabled = true;
@@ -450,6 +520,7 @@
       toast('এই চালটা এখন দেওয়া যাবে না।');
       return;
     }
+    if (action.k === 'custom') $('custom-input').value = '';
     selectedTactic = null;
     persist();
     await renderLog(true, { suspense: action.t === 'walk' });
@@ -720,7 +791,21 @@
     $('offer-minus').addEventListener('click', () => nudge(-1));
     $('offer-plus').addEventListener('click', () => nudge(1));
 
+    $('btn-next-item').addEventListener('click', changeItem);
+    $('custom-input').addEventListener('input', updateCustomHint);
+    $('custom-input').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); $('btn-offer').click(); } });
+
     $('btn-offer').addEventListener('click', () => {
+      if (selectedTactic === 'custom') {
+        const x = $('custom-input').value.trim();
+        if (x.length < 3) {
+          toast('আগে আপনার অজুহাতটা লিখুন।');
+          $('custom-input').focus();
+          return;
+        }
+        doAction({ t: 'offer', a: offerValue(), k: 'custom', x });
+        return;
+      }
       if (selectedTactic === 'walk') doAction({ t: 'walk' });
       else doAction(selectedTactic ? { t: 'offer', a: offerValue(), k: selectedTactic } : { t: 'offer', a: offerValue() });
     });

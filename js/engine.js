@@ -188,6 +188,43 @@
   }
   const tacticById = (id) => DATA.tactics.find((t) => t.id === id) || null;
 
+  /* ---------- the buyer's own excuse ----------
+   * A typed reason (Bangla or Banglish) is matched to the excuse card it resembles, so
+   * the vendor reacts to it the same way (and in his recorded voice). A reason that
+   * matches no card gets a general reaction instead. */
+  const MAX_CUSTOM = 3; // own excuses per game
+  const REASON_MIN = 3;
+  const REASON_MAX = 80;
+  const REASON_RULES = [
+    ['friends', ['বন্ধু', 'বান্ধব', 'bondhu', 'bandhu', 'bondu', 'bundu', 'friend', 'পরিচিত', 'সবাইকে', 'refer', 'কাস্টমার আন', 'খদ্দের আন', 'customer anbo', 'kastomar']],
+    ['student', ['স্টুডেন্ট', 'ছাত্র', 'student', 'studnt', 'ভার্সিটি', 'varsity', 'versity', 'কলেজ', 'college', 'স্কুলে পড়ি', 'হোস্টেল', 'hostel', 'টিউশন', 'tuition']],
+    ['mom', ['আম্মু', 'আম্মা', 'ammu', 'amma', 'ammi', 'আম্মি']],
+    ['gift', ['বিয়ে', 'বিয়ে', 'biye', 'biya', 'bie', 'wedding', 'বিবাহ']],
+    ['online', ['অনলাইন', 'online', 'onlin', 'দারাজ', 'daraz', 'ফেসবুক', 'facebook', 'fb পেজ', 'পেজে']],
+    ['competitor', ['পাশের দোকান', 'pasher dokan', 'pasher', 'অন্য দোকান', 'onno dokan', 'ওই দোকান', 'oi dokan', 'সামনের দোকান', 'shamner', 'samner', 'অন্য জায়গায়', 'অন্য জায়গায়', 'onno jaygay']],
+    ['budget', ['পকেট', 'pocket', 'poket', 'টাকা নাই', 'টাকা নেই', 'taka nai', 'taka nei', 'বাজেট', 'budget', 'বাজেট', 'গরিব', 'gorib', 'garib', 'টাকা কম', 'taka kom', 'বেতন', 'beton', 'salary']],
+    ['cash', ['ক্যাশ', 'cash', 'kash', 'নগদ', 'nogod', 'nagad', 'হাতে হাতে', 'এখনই দিব', 'এখনই দিচ্ছি', 'ekhoni dibo', 'ekhuni']],
+    ['bulk', ['দুইটা', 'দুটো', 'দুটা', 'duita', 'duto', 'dui ta', '২টা', '2ta', '2 ta', 'তিনটা', 'tinta', 'বেশি নিব', 'বেশি নেব', 'beshi nibo', 'besi nibo', 'একসাথে', 'eksathe', 'ডজন', 'dozen']],
+    ['defect', ['দাগ', 'dag', 'ছেঁড়া', 'ছেড়া', 'chera', 'ফাটা', 'fata', 'নষ্ট', 'nosto', 'noshto', 'ময়লা', 'ময়লা', 'moyla', 'ভাঙা', 'ভাঙ্গা', 'vanga', 'bhanga', 'সমস্যা', 'somossa', 'problem', 'খুঁত', 'খুত', 'khut', 'পুরান মাল', 'পুরাতন মাল']],
+    ['lastTime', ['আগেরবার', 'আগের বার', 'agerbar', 'ager bar', 'last time', 'lasttime', 'আগে কম', 'আগে নিছি', 'আগে নিয়েছি', 'আগে নিয়েছি', 'gotobar', 'গতবার']],
+    ['regular', ['পুরান কাস্টমার', 'পুরানো কাস্টমার', 'পুরান খদ্দের', 'puran', 'purano', 'regular', 'রেগুলার', 'নিয়মিত', 'নিয়মিত', 'niyomito', 'সবসময় আপনার', 'প্রতিবার আপনার', 'চিনেন না']],
+    ['closing', ['রাত', 'rat hoye', 'raat', 'দোকান বন্ধ', 'dokan bondho', 'dokan bondo', 'বন্ধ করবেন', 'বউনি', 'বৌনি', 'bouni', 'boni']],
+    ['flatter', ['সুন্দর', 'sundor', 'shundor', 'সেরা', 'sera', 'best', 'ভালো মাল', 'ভাল মাল', 'valo mal', 'bhalo mal', 'অসাধারণ', 'osadharon', 'দারুণ', 'darun', 'চমৎকার', 'পছন্দ হইছে', 'পছন্দ হয়েছে', 'পছন্দ হয়েছে', 'posondo', 'pochondo']],
+  ];
+  // য় has two Unicode spellings; NFC folds them into one
+  const norm = (x) => String(x || '').normalize('NFC').toLowerCase().replace(/\s+/g, ' ');
+  const RULES = REASON_RULES.map(([id, words]) => [id, words.map(norm)]);
+  function classifyReason(text) {
+    const t = ' ' + norm(text) + ' ';
+    for (const [id, words] of RULES) {
+      if (words.some((w) => t.includes(w))) return id;
+    }
+    return null;
+  }
+  function cleanReason(text) {
+    return String(text == null ? '' : text).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
   function createGame(setup) {
     const item = itemById(setup.itemId);
     const vendor = vendorById(setup.vendorId);
@@ -226,6 +263,7 @@
       standMult: 1,
       lastLine: {},
       apologized: false,
+      customUsed: 0,
       hand: dealHand(gen),
       rng: gen.rng,
     };
@@ -259,12 +297,34 @@
     };
   }
 
-  function makeOffer(state, amount, tacticId) {
+  function makeOffer(state, amount, tacticId, reasonText) {
     if (state.phase !== 'haggle') throw new Error('Not haggling');
     const O = Math.round(amount);
     if (!(O > 0) || O >= state.ask) throw new Error('Offer must be below the asking price');
     if (tacticId === 'walk') throw new Error('Use walkAway for the walk-away card');
-    if (tacticId) {
+
+    // `kind` is the card whose effect and vendor reaction apply
+    let kind = tacticId || null;
+    let reason = null;
+    let customStrength = 0;
+    let repeatOf = null;
+    if (tacticId === 'custom') {
+      reason = cleanReason(reasonText);
+      if (reason.length < REASON_MIN || reason.length > REASON_MAX) throw new Error('Reason must be 3-80 characters');
+      if (state.customUsed >= MAX_CUSTOM) throw new Error('No own excuses left');
+      customStrength = [1, 0.6, 0.3][state.customUsed];
+      state.customUsed++;
+      const match = classifyReason(reason);
+      if (match && state.used[match]) {
+        // an excuse already used (as a card or in your own words) falls flat
+        kind = 'custom';
+        repeatOf = match;
+        customStrength = 0;
+      } else {
+        kind = match || 'custom';
+        if (match) state.used[match] = true;
+      }
+    } else if (tacticId) {
       if (!tacticById(tacticId) || !state.hand.includes(tacticId)) throw new Error('That card is not in your hand');
       if (state.used[tacticId]) throw new Error('Tactic already used');
       state.used[tacticId] = true;
@@ -273,9 +333,14 @@
     const v = state.vendor;
     const F = state.floor;
     const A = state.ask;
-    const eff = tacticId ? (v.tactics[tacticId] != null ? v.tactics[tacticId] : 1) : 1;
+    const eff = kind && kind !== 'custom' ? (v.tactics[kind] != null ? v.tactics[kind] : 1) : 1;
     state.round++;
-    buyerSays(state, tacticId ? DATA.player[tacticId] : pick(state, DATA.player.offer), { price: O });
+    if (reason) {
+      const tail = DATA.player.custom;
+      say(state, 'buyer', reason + (/[,।?!.]$/.test(reason) ? ' ' : ', ') + fill(tail, vars(state, { price: O })), null, speechParts(tail, { price: O }, '', state.item.id));
+    } else {
+      buyerSays(state, tacticId ? DATA.player[tacticId] : pick(state, DATA.player.offer), { price: O });
+    }
 
     let cost = BASE_COST;
     let restore = 0;
@@ -299,52 +364,63 @@
     }
 
     // excuse card effect, by its type (see the deck in js/data.js)
-    const card = tacticId ? tacticById(tacticId) : null;
+    const card = kind && kind !== 'custom' ? tacticById(kind) : null;
     const ok = (key) => (eff >= 1 ? key : key + 'Meh');
+    if (kind === 'custom') {
+      // a reason he has no ready answer for: a small pity discount that fades with each one
+      if (customStrength >= 0.6 && O >= F * 0.6) {
+        concMult *= 1 + 0.35 * customStrength;
+        cost -= 3 * customStrength;
+        reaction = 'custom';
+      } else {
+        cost += 3;
+        reaction = repeatOf && DATA.lines[repeatOf + 'Meh'] ? repeatOf + 'Meh' : 'customMeh';
+      }
+    }
     switch (card && card.effect) {
       case 'sympathy':
         concMult *= 1 + 0.5 * eff;
         cost -= 5 * eff;
         if (eff >= 1) state.standMult *= 1 - 0.15 * Math.min(eff, 2);
-        reaction = ok(tacticId);
+        reaction = ok(kind);
         break;
       case 'pressure':
         if (O >= F * 0.8) {
           concMult *= 1 + 0.8 * eff;
           cost += 4;
           if (eff >= 1) state.standMult *= 1 - 0.2 * Math.min(eff, 1.5);
-          reaction = ok(tacticId);
+          reaction = ok(kind);
         } else {
           concMult *= 0.6;
           cost += 12;
-          reaction = tacticId + 'No';
+          reaction = kind + 'No';
         }
         break;
       case 'charm':
         restore += 16 * eff;
         concMult *= 1 + 0.15 * eff;
-        reaction = ok(tacticId);
+        reaction = ok(kind);
         break;
       case 'close':
         band += 0.07 * eff;
-        reaction = ok(tacticId);
+        reaction = ok(kind);
         break;
       case 'risky':
         if (eff >= 1) {
           concMult *= 1 + 0.6 * eff;
           state.standMult *= 1 - 0.2 * Math.min(eff, 1.5);
-          reaction = tacticId;
+          reaction = kind;
         } else {
           concMult *= 0.5;
           cost += 18;
-          reaction = tacticId + 'No';
+          reaction = kind + 'No';
         }
         break;
       case 'bulk':
         concMult *= 1 + 0.6 * eff;
         cost -= 2;
         if (eff >= 1) state.standMult *= 1 - 0.12 * Math.min(eff, 2);
-        reaction = ok(tacticId);
+        reaction = ok(kind);
         break;
       case 'flaw':
         if (eff >= 1) {
@@ -355,13 +431,13 @@
           concMult *= 0.7;
           cost += 14;
         }
-        reaction = ok(tacticId);
+        reaction = ok(kind);
         break;
       case 'late': {
         const lateness = Math.max(0, state.round - 3);
         concMult *= 1 + 0.06 * lateness * eff;
         band += 0.008 * lateness * eff;
-        reaction = eff >= 1 && state.round >= 5 ? tacticId : tacticId + 'Meh';
+        reaction = eff >= 1 && state.round >= 5 ? kind : kind + 'Meh';
         break;
       }
     }
@@ -520,7 +596,7 @@
   function act(state, action) {
     let res;
     switch (action.t) {
-      case 'offer': res = makeOffer(state, action.a, action.k || null); break;
+      case 'offer': res = makeOffer(state, action.a, action.k || null, action.x); break;
       case 'walk': res = walkAway(state); break;
       case 'back': res = goBack(state); break;
       case 'sorry': res = apologize(state); break;
@@ -672,6 +748,9 @@
     vendorById,
     createGame,
     offerLimits,
+    classifyReason,
+    MAX_CUSTOM,
+    REASON_MAX,
     act,
     replay,
     result,

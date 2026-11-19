@@ -114,7 +114,10 @@
       <div class="counter">
         <div class="ware">
           <span class="ware-emoji" id="g-item-emoji" aria-hidden="true"></span>
-          <span class="ware-name" id="g-item-name"></span>
+          <div class="ware-text">
+            <span class="ware-name" id="g-item-name"></span>
+            <button class="next-item" id="btn-next-item" type="button" hidden>🔄 অন্য জিনিস</button>
+          </div>
         </div>
         <div class="tag" aria-label="দোকানদারের দাম">
           <span class="tag-hole" aria-hidden="true"></span>
@@ -144,6 +147,11 @@
         <span>অজুহাত কার্ড</span><span class="muted">প্রতি খেলায় নতুন ৯টা, প্রতিটা একবার</span>
       </div>
       <div class="tactics" id="tactics" role="group" aria-label="কৌশল কার্ড"></div>
+      <div class="custom-reason" id="custom-row" hidden>
+        <label for="custom-input">আপনার নিজের অজুহাত</label>
+        <input id="custom-input" type="text" maxlength="80" placeholder="যেমন: বন্ধুদের নিয়ে আসবো" autocomplete="off" enterkeyhint="send">
+        <p class="custom-hint" id="custom-hint"></p>
+      </div>
 
       <div class="actions">
         <button class="btn btn-primary" id="btn-offer" type="button">দাম বলুন</button>
@@ -274,6 +282,8 @@
       <li><strong>ধৈর্য:</strong> গোপন দামের অনেক নিচে বললে বা আগের চেয়ে কম বললে ধৈর্য কমে। শূন্য হলে খেলা শেষ।</li>
       <li><strong>লক্ষণ:</strong> দোকানদার যখন খুব অল্প কমায়, তখন সে তার শেষ সীমার কাছে।</li>
       <li><strong>১৪ দফা:</strong> এর পরে দোকানদার লাস্ট প্রাইস বলে দেবে।</li>
+      <li><strong>নিজের অজুহাত:</strong> ✍️ কার্ডে নিজের ভাষায় কারণ লিখুন, বাংলা বা Banglish (যেমন "bondhu der anbo")। কোনো কার্ডের মতো হলে সেই কার্ডের মতোই কাজ করবে। প্রতি খেলায় ৩ বার।</li>
+      <li><strong>অন্য জিনিস:</strong> জিনিসটা পছন্দ না হলে 🔄 চেপে পরের জিনিসে যান।</li>
       <li><strong>রেগে গেলে:</strong> একবার মাফ চাওয়া যায়। দ্বিতীয়বার রাগলে আর বেচবে না।</li>
     </ul>
     <h3>কৌশল কার্ড</h3>
